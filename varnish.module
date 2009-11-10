@@ -1,10 +1,19 @@
 <?php
 // $Id:
 
+define (VARNISH_NO_CLEAR, 0);
+define (VARNISH_DEFAULT_CLEAR, 1);
+define (VARNISH_SELECTIVE_CLEAR, 2);
+
+
 /**
  * @file varnish.module
  * Provide drupal hooks for integration with the Varnish control layer.
  */
+ 
+ function varnish_init() {
+  // maybe later
+ }
 
 /**
  * Implementation of hook_menu()
@@ -16,7 +25,8 @@ function varnish_menu() {
   $items['admin/settings/varnish'] = array(
     'title' => 'Varnish settings',
     'description' => 'Configure your varnish integration.',
-    'page callback' => 'varnish_admin_settings_page',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('varnish_admin_settings_form'),
     'access arguments' => array('administer varnish'),
     'file' => 'varnish.admin.inc',
   );
@@ -27,10 +37,16 @@ function varnish_menu() {
     'access arguments' => array('administer varnish'),
     'file' => 'varnish.admin.inc',
   );
+  $items['admin/varnish/test'] = array(
+    'title' => 'Varnish test',
+    'description' => 'Configure your varnish integration.',
+    'page callback' => 'varnish_admin_reports_page',
+    'access arguments' => array('administer varnish'),
+    'file' => 'varnish.admin.inc',
+  );
 
   return $items;
 }
-
 
 /**
  * Implementation of hook_requirements()
@@ -39,6 +55,97 @@ function varnish_menu() {
  */
 function varnish_requirements($phase) {
   if ($phase == 'runtime') {
+    $requirements = array('varnish');
+    $requirements['varnish']['title'] = t('Varnish status');
     // try a varnish admin connect, report results
+    $status = _varnish_terminal_run('status', FALSE);
+    if (strpos($status, 'Child in state running') === FALSE) {
+      $requirements['varnish']['value'] = t('Varnish connection broken');
+      $requirements['varnish']['severity'] = REQUIREMENT_ERROR;
+      $requirements['varnish']['description'] = t('The Varnish control terminal is not responding at %terminal.', array('%terminal' => variable_get('varnish_control_terminal', '127.0.0.1 8081')));
+    }
+    else {
+      $requirements['varnish']['value'] = t('Varnish runing');
+    }
+    return $requirements;
   }
+}
+
+/**
+ * Implementation of hook_nodeapi()
+ *
+ * Used to pick up cache_clearing events
+ */
+function varnish_nodeapi(&$node, $op) {
+  if ($op == 'insert' || $op == 'update') {
+    // We've probably just run through node_save, and normally this is where
+    // Drupal calls a cache_clear_all().
+    switch (variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR)) {
+      case VARNISH_DEFAULT_CLEAR:
+        _varnish_terminal_run('purge.hash .*');
+        break;
+      case VARNISH_SELECTIVE_CLEAR:
+        $selective_urls = str_replace('<front>', "/\n". variable_get('site_frontpage', 'node'), variable_get('varnish_cache_clear_urls', '<front>'));
+        $urls = explode("\n", $selective_urls);
+        $urls = array_merge($urls, varnish_get_active_urls($node));
+        $purge = implode('$|^/', $urls);
+         _varnish_terminal_run('purge req.url ~ "^'. $purge .'$"');
+        break;
+    }
+    
+  }
+}
+
+/**
+ * Implementation of hook_cache_flush()
+ *
+ * Respect the big cache flush.
+ */
+function varnish_flush_caches() {
+  _varnish_terminal_run('purge.hash .*');
+}
+
+/**
+ * Extensible logic function to get other urls to clear.
+ *
+ * TODO: Merge this with boost logic.
+ */
+function varnish_get_active_urls($node) {
+  $urls = array();
+  $urls[] = 'node/'. $node->nid;
+  if ($node->type == 'blog') {
+    $urls[] = 'blog';
+    $urls[] = 'blog/'. $node->uid;
+  }
+    // lots more here...
+  foreach($urls as $url) {
+    $alias = drupal_get_path_alias($url); // TODO: languages?
+    if ($alias != $url) {
+      $urls[] = $alias;
+    }
+  }
+  return $urls;
+}
+
+
+/**
+ * Helper function that sends commands to Varnish
+ *
+ * TODO: nc -i 1 is slow and sending it to the background doesn't seem to work.
+ */
+function _varnish_terminal_run($command, $background = TRUE) {
+  $terminal = variable_get('varnish_control_terminal', '127.0.0.1 8081');
+  timer_start('varnish');
+  if ($background) {
+    `echo '$command' | nc -i 1 $terminal &`;
+    watchdog('varnish', "Ran $command to background");
+    $ret = '';
+  }
+  else {
+    $ret = `echo '$command' | nc -i 1 $terminal`;
+    watchdog('varnish', "Ran $command. Response: $ret");
+  }
+    $now = timer_read('varnish');
+  drupal_set_message("Varnish time: $now");
+  return $ret;
 }
