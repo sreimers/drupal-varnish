@@ -131,21 +131,29 @@ function varnish_get_active_urls($node) {
 /**
  * Helper function that sends commands to Varnish
  *
- * TODO: nc -i 1 is slow and sending it to the background doesn't seem to work.
+ * Utilizes sockets to talk to varnish terminal.
  */
-function _varnish_terminal_run($command, $background = TRUE) {
-  $terminal = variable_get('varnish_control_terminal', '127.0.0.1 8081');
-  timer_start('varnish');
-  if ($background) {
-    `echo '$command' | nc -i 1 $terminal &`;
-    watchdog('varnish', "Ran $command to background");
-    $ret = '';
+function _varnish_terminal_run($command) {
+  if (!extension_loaded('sockets')) {
+    drupal_set_message(t('Sockets extension not enabled. Varnish terminal communication aborted.'), 'error');
+    return FALSE;
   }
-  else {
-    $ret = `echo '$command' | nc -i 1 $terminal`;
-    watchdog('varnish', "Ran $command. Response: $ret");
+  $server = variable_get('varnish_control_terminal_server', '127.0.0.1');
+  $port = variable_get('varnish_control_terminal_port', '8081');
+
+  
+  $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
+  if (!socket_connect($client, $server, $port)) {
+    watchdog('varnish', t('Unable to connect to server socket !server:!port', array('!server' => $server, '!port' => $port)));
+    return FALSE;
   }
-    $now = timer_read('varnish');
-  drupal_set_message("Varnish time: $now");
+  socket_write($client, "$command\n");
+  $code = socket_read($client, 3, PHP_BINARY_READ);
+  if ($code != 200) {
+    $error = socket_read($client, 3000, PHP_BINARY_READ);
+    watchdog('varnish', t('Recieved status code !code running !command. Full response text: !error', array('!code' => $code, '!command' => $command, '!error' => $error)));
+  }
+  socket_close($client);
+  
   return $ret;
 }

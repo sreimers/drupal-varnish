@@ -11,12 +11,25 @@
 * Menu callback for varnish admin settings.
 */
 function varnish_admin_settings_form() {
-  $form = array(); 
-  $form['varnish_control_terminal'] = array(
+  $form = array();
+  
+  if (!extension_loaded('sockets')) {
+    drupal_set_message(t('Sockets extension not enabled. Varnish terminal communication aborted.'), 'error');
+    return $form;
+  }
+  $form['varnish_control_terminal_server'] = array(
     '#type' => 'textfield',
-    '#title' => t('Varnish Control Terminal Connection'),
-    '#default_value' => variable_get('varnish_control_terminal', '127.0.0.1 8081'),
-    '#description' => t('Set this to the server/socket over which to connect to your varnish control terminal. This must be configured for Drupal to talk to Varnish.'),
+    '#title' => t('Varnish Control Terminal Server'),
+    '#default_value' => variable_get('varnish_control_terminal_server', '127.0.0.1'),
+    '#required' => TRUE,    
+    '#description' => t('Set this to the server IP or hostname that varnish runs on. This must be configured for Drupal to talk to Varnish.'),
+  );
+  $form['varnish_control_terminal_port'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Varnish Control Terminal Server'),
+    '#default_value' => variable_get('varnish_control_terminal_port', '8081'),
+    '#required' => TRUE,
+    '#description' => t('Set this to the port on which your varnish control terminal runs. This must be configured for Drupal to talk to Varnish.'),
   );
   $form['varnish_control_key'] = array(
     '#type' => 'textfield',
