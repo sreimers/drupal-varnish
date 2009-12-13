@@ -142,7 +142,7 @@ function varnish_get_active_urls($node) {
  *
  * Utilizes sockets to talk to varnish terminal.
  */
-function _varnish_terminal_run($command) {
+function _varnish_terminal_run($command, $returnlength = 1000) {
   if (!extension_loaded('sockets')) {
     drupal_set_message(t('Sockets extension not enabled. Varnish terminal communication aborted.'), 'error');
     return FALSE;
@@ -161,6 +161,11 @@ function _varnish_terminal_run($command) {
   if ($code != 200) {
     $error = socket_read($client, 3000, PHP_BINARY_READ);
     watchdog('varnish', t('Recieved status code !code running !command. Full response text: !error', array('!code' => $code, '!command' => $command, '!error' => $error)));
+    $ret = FALSE;
+  }
+  else {
+    // successful connection
+    $ret = socket_read($client, $return, PHP_BINARY_READ);
   }
   socket_close($client);
   
