@@ -27,7 +27,7 @@ function varnish_admin_settings_form() {
   $form['varnish_control_terminal_port'] = array(
     '#type' => 'textfield',
     '#title' => t('Varnish Control Terminal Server'),
-    '#default_value' => variable_get('varnish_control_terminal_port', '8081'),
+    '#default_value' => variable_get('varnish_control_terminal_port', '6082'),
     '#required' => TRUE,
     '#description' => t('Set this to the port on which your varnish control terminal runs. This must be configured for Drupal to talk to Varnish.'),
   );
