@@ -37,14 +37,6 @@ function varnish_menu() {
     'access arguments' => array('administer varnish'),
     'file' => 'varnish.admin.inc',
   );
-  $items['admin/varnish/test'] = array(
-    'title' => 'Varnish test',
-    'description' => 'Configure your varnish integration.',
-    'page callback' => 'varnish_admin_reports_page',
-    'access arguments' => array('administer varnish'),
-    'file' => 'varnish.admin.inc',
-  );
-
   return $items;
 }
 

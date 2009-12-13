@@ -61,7 +61,8 @@ function varnish_admin_settings_form() {
     '#title' => t('Stats'),
   );
   if ($_GET['stats'] == 1) {  
-    $status = _varnish_terminal_run('stats', FALSE);
+    $status = _varnish_terminal_run('stats', 50000);
+    $form['varnish_stats']['#collapsed'] = FALSE;
   }
   else {
     $status = l(t('Fetch stats'), 'admin/settings/varnish', array('query' => 'stats=1'));
@@ -83,4 +84,6 @@ function varnish_admin_settings_form() {
 */
 function varnish_admin_reports_page() {
   // connect to varnish and do a full status report
+  $status = _varnish_terminal_run('stats', 50000);
+  return "<pre>$status</pre>";
 }
