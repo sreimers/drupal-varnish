@@ -48,6 +48,15 @@ function varnish_menu() {
   return $items;
 }
 
+/** 
+ * Implemetation of hook_perm()
+ *
+ * Allows admins to control access to varnish settings.
+ */
+function varnish_perm() {
+  return array('administer varnish');
+}
+
 /**
  * Implementation of hook_requirements()
  *
