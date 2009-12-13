@@ -157,7 +157,7 @@ function _varnish_terminal_run($command, $returnlength = 1000) {
   }
   else {
     // successful connection
-    $ret = socket_read($client, $return, PHP_BINARY_READ);
+    $ret = socket_read($client, $returnlength, PHP_BINARY_READ);
   }
   socket_close($client);
   
