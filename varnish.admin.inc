@@ -13,10 +13,24 @@
 function varnish_admin_settings_form() {
   $form = array();
   
+  $form['varnish_special_cookie'] = array(
+    '#type' => 'radios',
+    '#title' => t('Set a special varnish cookie?'),
+    '#options' => array(
+      0 => t('Drupal Default'), 
+      1 => t('None'),
+    ),
+    '#default_value' => variable_get('varnish_special_cookie', FALSE),
+    '#description' => t('For some configurations, it may be advantageous to have Drupal generate a special cookie when users are logged in to allow for more specific handling in your VCL file.'),
+  );
+  
   if (!extension_loaded('sockets')) {
-    drupal_set_message(t('Sockets extension not enabled. Varnish terminal communication aborted.'), 'error');
-    return $form;
+    drupal_set_message(t('Sockets extension not enabled. Varnish terminal communication configuration skipped.'), 'error');
+    return system_settings_form($form);
   }
+  
+  // Begin socket-dependent configuration.
+  
   $form['varnish_control_terminal_server'] = array(
     '#type' => 'textfield',
     '#title' => t('Varnish Control Terminal Server'),

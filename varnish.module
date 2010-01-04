@@ -4,6 +4,7 @@
 define (VARNISH_NO_CLEAR, 0);
 define (VARNISH_DEFAULT_CLEAR, 1);
 define (VARNISH_SELECTIVE_CLEAR, 2);
+define (VARNISH_COOKIE_NAME, 'VARNISH');
 
 
 /**
@@ -12,7 +13,7 @@ define (VARNISH_SELECTIVE_CLEAR, 2);
  */
  
  function varnish_init() {
-  // maybe later
+   global $user;
  }
 
 /**
@@ -162,4 +163,37 @@ function _varnish_terminal_run($command, $returnlength = 1000) {
   socket_close($client);
   
   return $ret;
+}
+
+
+/**
+ * Implementaiton of hook_user()
+ *
+ * This sets/removes a special cookie on login/logout so that a sysadmin can 
+ * develop a VCL file that isn't entirely dependent on the session cookie to
+ * determine whether or not to serve a page from cache.
+ */
+function varnish_user($op, &$edit, &$account, $category = NULL) {
+  if (variable_get('varnish_special_cookie', 0) == 1 && $op == 'login') {
+    _varnish_set_cookie($account); 
+  }
+  if (variable_get('varnish_special_cookie', 0) == 1 && $op == 'logout') {
+    _varnish_remove_cookie($account);
+  }
+}
+
+/**
+ * Remove our cookie.
+ */
+function _varnish_remove_cookie() {
+  $expires = -1;
+  setcookie(VARNISH_COOKIE_NAME, NULL, $expires, ini_get('session.cookie_path'), ini_get('session.cookie_domain')); 
+}
+
+/**
+ * Set our cookie.
+ */
+function _varnish_set_cookie($account) {
+  $expires = time() + ini_get('session.cookie_lifetime'); 
+  setcookie(VARNISH_COOKIE_NAME, $account->uid, $expires, ini_get('session.cookie_path'), ini_get('session.cookie_domain'));
 }
