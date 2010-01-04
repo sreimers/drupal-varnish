@@ -17,10 +17,10 @@ function varnish_admin_settings_form() {
     '#type' => 'radios',
     '#title' => t('Set a special varnish cookie?'),
     '#options' => array(
-      0 => t('Drupal Default'), 
-      1 => t('None'),
+      0 => t('Disabled'), 
+      1 => t('Enabled'),
     ),
-    '#default_value' => variable_get('varnish_special_cookie', FALSE),
+    '#default_value' => variable_get('varnish_special_cookie', 0),
     '#description' => t('For some configurations, it may be advantageous to have Drupal generate a special cookie when users are logged in to allow for more specific handling in your VCL file.'),
   );
   
