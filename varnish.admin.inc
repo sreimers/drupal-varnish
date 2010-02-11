@@ -13,15 +13,16 @@
 function varnish_admin_settings_form() {
   $form = array();
   
-  $form['varnish_special_cookie'] = array(
+  // Decide whether or not to flush caches on cron runs.
+  $form['varnish_flush_cron'] = array(
     '#type' => 'radios',
-    '#title' => t('Set a special varnish cookie?'),
+    '#title' => t('Flush page cache on cron?'),
     '#options' => array(
       0 => t('Disabled'), 
-      1 => t('Enabled'),
+      1 => t('Enabled (with respect for cache_lifetime)'),
     ),
-    '#default_value' => variable_get('varnish_special_cookie', 0),
-    '#description' => t('For some configurations, it may be advantageous to have Drupal generate a special cookie when users are logged in to allow for more specific handling in your VCL file.'),
+    '#default_value' => variable_get('varnish_flush_cron', 0),
+    '#description' => t('Internally Drupal will attempt to flush its page cache every time cron.php runs. This can mean too-frequent cache flushes if you have cron running frequently. NOTE: this cache flush is global!'),
   );
   
   if (!extension_loaded('sockets')) {
