@@ -119,7 +119,7 @@ function varnish_flush_caches() {
       $cache_flush = variable_get('cache_flush_varnish', 0);
       if ($cache_flush == 0) {
         // This is the first request to clear the cache, start a timer.
-        variable_set('cache_flush_'. $table, time());
+        variable_set('cache_flush_varnish', time());
       }
       else if (time() > ($cache_flush + variable_get('cache_lifetime', 0))) {
         varnish_purge_all_pages();
