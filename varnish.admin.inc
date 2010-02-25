@@ -26,7 +26,7 @@ function varnish_admin_settings_form() {
   );
   
   if (!extension_loaded('sockets')) {
-    drupal_set_message(t('Sockets extension not enabled. Varnish terminal communication configuration skipped.'), 'error');
+    drupal_set_message(t('<a href="http://us3.php.net/manual/en/sockets.installation.php">PHP Sockets extension</a> not enabled. Varnish terminal communication configuration skipped.'), 'error');
     return system_settings_form($form);
   }
   
