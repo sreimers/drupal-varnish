@@ -57,18 +57,16 @@ function varnish_admin_settings_form() {
     '#title' => t('Varnish Cache Clearing'),
     '#options' => array(
       VARNISH_DEFAULT_CLEAR => t('Drupal Default'), 
-      VARNISH_SELECTIVE_CLEAR => t('Selective'), 
       VARNISH_NO_CLEAR => t('None'),
     ),
     '#default_value' => variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR),
     '#description' => t('What kind of cache clearing Varnish should utilize. Drupal default will clear all page caches on node updates and cache flush events. Selective will clear a list of URLs you specify as well as any node urls themselves. None will allow stale pages to persist.'),
   );
-  $form['varnish_cache_clear_urls'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Varnish Selective Cache Clear Urls'),
-    '#default_value' => variable_get('varnish_cache_clear_urls', '<front>'),
-    '#description' => t('One url per line to clear in addition to obvious node-related paths. VCL Regular expressions are permitted.'),
-  );
+  
+  // Detect expire module and add this option.
+  if (module_exists('expire')) {
+    $form['varnish_cache_clear']['#options'][VARNISH_SELECTIVE_CLEAR] = t('Selective (experimental; uses expire.module)');
+  }
   
   $form['varnish_stats'] = array(
     '#type' => 'fieldset',

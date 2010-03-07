@@ -20,7 +20,7 @@ function varnish_menu() {
   $items = array();
   $items['admin/settings/varnish'] = array(
     'title' => 'Varnish settings',
-    'description' => 'Configure your varnish integration.',
+    'description' => 'Get the output of varnishstat.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('varnish_admin_settings_form'),
     'access arguments' => array('administer varnish'),
@@ -81,18 +81,41 @@ function varnish_nodeapi(&$node, $op) {
       case VARNISH_DEFAULT_CLEAR:
         varnish_purge_all_pages();
         break;
-      case VARNISH_SELECTIVE_CLEAR:
-        $host = _varnish_get_host();
-        $base = base_path();
-        $selective_urls = str_replace('<front>', "/\n". variable_get('site_frontpage', 'node'), variable_get('varnish_cache_clear_urls', '<front>'));
-        $urls = explode("\n", $selective_urls);
-        $urls = array_merge($urls, varnish_get_active_urls($node));
-        $purge = implode('$|^'. $base, $urls);
-         _varnish_terminal_run('purge req.http.host ~ '. $host .' && req.url ~ "^'. $base . $purge .'$"');
-        break;
     }
-    
   }
+}
+
+/**
+ * Implementation of hook_comment()
+ *
+ * Used to pick up cache_clearing events
+ */
+function varnish_comment($comment, $op) {
+  switch ($op) {
+    case 'insert':
+    case 'update':
+    case 'publish':
+    case 'unpublish':
+    case 'delete':
+      if (variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
+        varnish_purge_all_pages();
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_expire_cache
+ *
+ * Take an array from expire.module and issue purges!
+ */
+function varnish_expire_cache($paths) {
+  $host = _varnish_get_host();
+  $base = base_path();
+  $paths[] = variable_get('site_frontpage', 'node');
+  $purge = implode('$|^'. $base, $paths);
+   _varnish_terminal_run('purge req.http.host ~ '. $host .' && req.url ~ "^'. $base . $purge .'$"');
+  break;
 }
 
 /**
@@ -152,7 +175,7 @@ function _varnish_get_host() {
 /**
  * Extensible logic function to get other urls to clear.
  *
- * TODO: Merge this with boost logic.
+ * TODO: Merge this with Expires.module
  */
 function varnish_get_active_urls($node) {
   $urls = array();
