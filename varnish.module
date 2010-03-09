@@ -20,7 +20,7 @@ function varnish_menu() {
   $items = array();
   $items['admin/settings/varnish'] = array(
     'title' => 'Varnish settings',
-    'description' => 'Get the output of varnishstat.',
+    'description' => 'Configure your varnish integration.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('varnish_admin_settings_form'),
     'access arguments' => array('administer varnish'),
@@ -28,7 +28,7 @@ function varnish_menu() {
   );
   $items['admin/reports/varnish'] = array(
     'title' => 'Varnish status',
-    'description' => 'Configure your varnish integration.',
+    'description' => 'Get the output of varnishstat.',
     'page callback' => 'varnish_admin_reports_page',
     'access arguments' => array('administer varnish'),
     'file' => 'varnish.admin.inc',
