@@ -3,7 +3,7 @@
 
 define (VARNISH_NO_CLEAR, 0);
 define (VARNISH_DEFAULT_CLEAR, 1);
-define (VARNISH_SELECTIVE_CLEAR, 2);
+define (VARNISH_SELECTIVE_CLEAR, 2); // Requires Expire.module to be enabled.
 
 /**
  * @file varnish.module
@@ -107,12 +107,13 @@ function varnish_comment($comment, $op) {
 /**
  * Implementation of hook_expire_cache
  *
- * Take an array from expire.module and issue purges!
+ * Takes an array from expire.module and issue purges.
+ *
+ * You may also safely call this function directly with an array of local urls to purge.
  */
 function varnish_expire_cache($paths) {
   $host = _varnish_get_host();
   $base = base_path();
-  $paths[] = variable_get('site_frontpage', 'node');
   $purge = implode('$|^'. $base, $paths);
    _varnish_terminal_run('purge req.http.host ~ '. $host .' && req.url ~ "^'. $base . $purge .'$"');
   break;
@@ -170,28 +171,6 @@ function _varnish_get_host() {
   global $base_url;
   $parts = parse_url($base_url);
   return $parts['host'];
-}
-
-/**
- * Extensible logic function to get other urls to clear.
- *
- * TODO: Merge this with Expires.module
- */
-function varnish_get_active_urls($node) {
-  $urls = array();
-  $urls[] = 'node/'. $node->nid;
-  if ($node->type == 'blog') {
-    $urls[] = 'blog';
-    $urls[] = 'blog/'. $node->uid;
-  }
-    // lots more here...
-  foreach($urls as $url) {
-    $alias = drupal_get_path_alias($url); // TODO: languages?
-    if ($alias != $url) {
-      $urls[] = $alias;
-    }
-  }
-  return $urls;
 }
 
 
