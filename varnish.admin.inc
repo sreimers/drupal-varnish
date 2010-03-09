@@ -60,12 +60,16 @@ function varnish_admin_settings_form() {
       VARNISH_NO_CLEAR => t('None'),
     ),
     '#default_value' => variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR),
-    '#description' => t('What kind of cache clearing Varnish should utilize. Drupal default will clear all page caches on node updates and cache flush events. Selective will clear a list of URLs you specify as well as any node urls themselves. None will allow stale pages to persist.'),
+    '#description' => t('What kind of cache clearing Varnish should utilize. Drupal default will clear all page caches on node updates and cache flush events. None will allow pages to persist for their full max-age; use this if you want to write your own cache-clearing logic.'),
   );
   
   // Detect expire module and add this option.
   if (module_exists('expire')) {
     $form['varnish_cache_clear']['#options'][VARNISH_SELECTIVE_CLEAR] = t('Selective (experimental; uses expire.module)');
+    $form['varnish_cache_clear']['#description'] .= ' '. t('Selective will clear a list of URLs you specify as well as any node urls themselves.');
+  }
+  else {
+    $form['varnish_cache_clear']['#description'] .= ' '. t('Installing the !link will enable "Selective" clearing.', array('!link' => '<a href="http://drupal.org/project/expire" target="_blank">'. t('Expire module') .'</a>'));
   }
   
   $form['varnish_stats'] = array(
