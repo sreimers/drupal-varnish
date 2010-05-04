@@ -2,4 +2,4 @@
 name = Varnish 
 description = "Provides integration with the Varnish HTTP accelerator."
 core = 6.x
-package = Cache
+package = Caching

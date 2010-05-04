@@ -55,8 +55,8 @@ function varnish_requirements($phase) {
     $requirements = array('varnish');
     $requirements['varnish']['title'] = t('Varnish status');
     // try a varnish admin connect, report results
-    $status = _varnish_terminal_run('status', 300);
-    if (strpos($status, 'Child in state running') === FALSE) {
+    $status = _varnish_terminal_run('status');
+    if ($status['code'] === FALSE) {
       $requirements['varnish']['value'] = t('Varnish connection broken');
       $requirements['varnish']['severity'] = REQUIREMENT_ERROR;
       $requirements['varnish']['description'] = t('The Varnish control terminal is not responding at %server on port %port.', array('%server' => variable_get('varnish_control_terminal_server', '127.0.0.1'), '%port' => variable_get('varnish_control_terminal_port', '6082')));
@@ -179,14 +179,14 @@ function _varnish_get_host() {
  *
  * Utilizes sockets to talk to varnish terminal.
  */
-function _varnish_terminal_run($command, $returnlength = 1000) {
+function _varnish_terminal_run($command) {
   if (!extension_loaded('sockets')) {
     drupal_set_message(t('Sockets extension not enabled. Varnish terminal communication aborted.'), 'error');
     return FALSE;
   }
+
   $server = variable_get('varnish_control_terminal_server', '127.0.0.1');
   $port = variable_get('varnish_control_terminal_port', '6082');
-
   
   $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
   if (!socket_connect($client, $server, $port)) {
@@ -194,17 +194,35 @@ function _varnish_terminal_run($command, $returnlength = 1000) {
     return FALSE;
   }
   socket_write($client, "$command\n");
-  $code = socket_read($client, 3, PHP_BINARY_READ);
-  if ($code != 200) {
-    $error = socket_read($client, 3000, PHP_BINARY_READ);
-    watchdog('varnish', t('Recieved status code !code running !command. Full response text: !error', array('!code' => $code, '!command' => $command, '!error' => $error)));
+  $status = _varnish_read_socket($client);
+  
+  // socket_read() hangs if there is no data to read. If this header message exists, we need to read it and move on to the next message in buffer. This is a sloppy way of doing that.
+  // We ignore on the status command, because even the header message returns a status code.
+  if ($command != 'status' && strpos($status[msg],"Varnish HTTP accelerator CLI.") !== FALSE) {
+    $status = _varnish_read_socket($client);
+  }
+  
+  if ($status['code'] != 200) {
+    watchdog('varnish', t('Recieved status code !code running !command. Full response text: !error', array('!code' => $status['code'], '!command' => $command, '!error' => $status['msg'])));
     $ret = FALSE;
   }
   else {
     // successful connection
-    $ret = socket_read($client, $returnlength, PHP_BINARY_READ);
+    $ret = $status;
   }
   socket_close($client);
   
   return $ret;
+}
+
+function _varnish_read_socket($client) {
+  // status and length info is always 13 characters. 
+  $header = socket_read($client, 13, PHP_BINARY_READ);
+  $msg_len = (int)substr($header,4,6) + 1;
+  $status = array(
+    'code' => substr($header,0,3),
+    'msg' => socket_read($client, $msg_len, PHP_BINARY_READ)
+  );
+
+  return $status;
 }
