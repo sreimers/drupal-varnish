@@ -13,6 +13,13 @@
 function varnish_admin_settings_form() {
   $form = array();
   
+  if (!extension_loaded('sockets')) {
+    drupal_set_message(t('<a href="http://php.net/manual/en/sockets.installation.php">PHP Sockets extension</a> not enabled. Varnish terminal communication configuration skipped.'), 'error');
+    return system_settings_form($form);
+  }
+
+  // Begin socket-dependent configuration.
+  
   // Decide whether or not to flush caches on cron runs.
   $form['varnish_flush_cron'] = array(
     '#type' => 'radios',
@@ -24,14 +31,7 @@ function varnish_admin_settings_form() {
     '#default_value' => variable_get('varnish_flush_cron', 0),
     '#description' => t('Internally Drupal will attempt to flush its page cache every time cron.php runs. This can mean too-frequent cache flushes if you have cron running frequently. NOTE: this cache flush is global!'),
   );
-  
-  if (!extension_loaded('sockets')) {
-    drupal_set_message(t('<a href="http://php.net/manual/en/sockets.installation.php">PHP Sockets extension</a> not enabled. Varnish terminal communication configuration skipped.'), 'error');
-    return system_settings_form($form);
-  }
-  
-  // Begin socket-dependent configuration.
-  
+      
   $form['varnish_control_terminal_server'] = array(
     '#type' => 'textfield',
     '#title' => t('Varnish Control Terminal Server'),
@@ -71,26 +71,21 @@ function varnish_admin_settings_form() {
   else {
     $form['varnish_cache_clear']['#description'] .= ' '. t('Installing the !link will enable "Selective" clearing.', array('!link' => '<a href="http://drupal.org/project/expire" target="_blank">'. t('Expire module') .'</a>'));
   }
-  
+
+  // Check status
   $form['varnish_stats'] = array(
-    '#type' => 'fieldset',
-    '#collapsible' => TRUE,
-    '#title' => t('Stats'),
+    '#type' => 'item',
+    '#title' => t('Status'),
   );
-  if ($_GET['stats'] == 1) {  
-    $status = _varnish_terminal_run('stats');
-    $form['varnish_stats']['#collapsed'] = FALSE;
+
+  $status = _varnish_terminal_run('status');
+
+  if ($status['code'] != 200) {
+    $form['varnish_stats']['#value'] = t('The Varnish control terminal is not responding at %server on port %port.', array('%server' => variable_get('varnish_control_terminal_server', '127.0.0.1'), '%port' => variable_get('varnish_control_terminal_port', '6082')));
   }
   else {
-    $status = l(t('Fetch stats'), 'admin/settings/varnish', array('query' => 'stats=1'));
-    $form['varnish_stats']['#collapsed'] = TRUE;
+    $form['varnish_stats']['#value'] = t('Varnish running. Observe more detailed statistics !link.', array('!link' => l(t('here'), 'admin/reports/varnish')));
   }
-  $form['varnish_stats']['data'] = array(
-    '#type' => 'markup',
-    '#prefix' => '<pre>',
-    '#suffic' => '</pre>',
-    '#value' => $status['msg'],
-  );
 
   return system_settings_form($form);
 }
