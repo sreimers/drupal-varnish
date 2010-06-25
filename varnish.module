@@ -193,14 +193,15 @@ function _varnish_terminal_run($command) {
     watchdog('varnish', t('Unable to connect to server socket !server:!port', array('!server' => $server, '!port' => $port)));
     return FALSE;
   }
+
+  socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>0, 'usec'=>50));
+
+  # If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
+  _varnish_read_socket($client);
+
+  # Send command and get response.
   socket_write($client, "$command\n");
   $status = _varnish_read_socket($client);
-  
-  // socket_read() hangs if there is no data to read. If this header message exists, we need to read it and move on to the next message in buffer. This is a sloppy way of doing that.
-  // We ignore on the status command, because even the header message returns a status code.
-  if ($command != 'status' && strpos($status[msg],"Varnish HTTP accelerator CLI.") !== FALSE) {
-    $status = _varnish_read_socket($client);
-  }
   
   if ($status['code'] != 200) {
     watchdog('varnish', t('Recieved status code !code running !command. Full response text: !error', array('!code' => $status['code'], '!command' => $command, '!error' => $status['msg'])));
