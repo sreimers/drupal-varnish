@@ -186,7 +186,7 @@ function _varnish_get_host() {
  */
 function _varnish_terminal_run($command) {
   if (!extension_loaded('sockets')) {
-    drupal_set_message(t('<a href="http://php.net/manual/en/sockets.installation.php">PHP Sockets extension</a> not enabled. Varnish terminal communication aborted.'), 'error');
+    // Prevent fatal errors if people don't have requirements.
     return FALSE;
   }
   $ret = array();
@@ -202,10 +202,24 @@ function _varnish_terminal_run($command) {
   
     socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>0, 'usec'=>50));
   
-    # If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
-    _varnish_read_socket($client);
+    // If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
+    $status = _varnish_read_socket($client);
+
+    // Do we need to authenticate?
+    if ($status['code'] == 107) { // Require authentication
+      $challenge = substr($status['msg'], 0, 32);
+      $pack = $challenge ."\x0A". $secret ."\x0A". $challenge ."\x0A";
+      $key = hash('sha256', $pack);
+
+      socket_write($client, "auth $key\n");
+      $status = _varnish_read_socket($client);
+      if ($status['code'] == 200) {
+        watchdog('varnish', t('Authentication to server successfully!'));
+      }
+    }
+
   
-    # Send command and get response.
+    // Send command and get response.
     $result = socket_write($client, "$command\n");
     $status = _varnish_read_socket($client);
     
