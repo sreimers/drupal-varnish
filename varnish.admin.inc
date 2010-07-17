@@ -32,19 +32,12 @@ function varnish_admin_settings_form() {
     '#description' => t('Internally Drupal will attempt to flush its page cache every time cron.php runs. This can mean too-frequent cache flushes if you have cron running frequently. NOTE: this cache flush is global!'),
   );
       
-  $form['varnish_control_terminal_server'] = array(
+  $form['varnish_control_terminal'] = array(
     '#type' => 'textfield',
-    '#title' => t('Varnish Control Terminal Server'),
-    '#default_value' => variable_get('varnish_control_terminal_server', '127.0.0.1'),
+    '#title' => t('Varnish Control Terminal'),
+    '#default_value' => variable_get('varnish_control_terminal', '127.0.0.1:6082'),
     '#required' => TRUE,    
-    '#description' => t('Set this to the server IP or hostname that varnish runs on. This must be configured for Drupal to talk to Varnish.'),
-  );
-  $form['varnish_control_terminal_port'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Varnish Control Terminal Server'),
-    '#default_value' => variable_get('varnish_control_terminal_port', '6082'),
-    '#required' => TRUE,
-    '#description' => t('Set this to the port on which your varnish control terminal runs. This must be configured for Drupal to talk to Varnish.'),
+    '#description' => t('Set this to the server IP or hostname that varnish runs on (e.g. 127.0.0.1:6082). This must be configured for Drupal to talk to Varnish. Separate multiple servers with spaces.'),
   );
   $form['varnish_control_key'] = array(
     '#type' => 'textfield',
@@ -79,14 +72,19 @@ function varnish_admin_settings_form() {
   );
 
   $status = _varnish_terminal_run('status');
-
-  if ($status['code'] != 200) {
-    $form['varnish_stats']['#value'] = t('The Varnish control terminal is not responding at %server on port %port.', array('%server' => variable_get('varnish_control_terminal_server', '127.0.0.1'), '%port' => variable_get('varnish_control_terminal_port', '6082')));
+  $terminals = explode(' ', variable_get('varnish_control_terminal', '127.0.0.1:6082'));
+  $items = array();
+  foreach ($terminals as $terminal) {
+    list($server, $port) = explode(':', $terminal);
+    $stat = array_shift($status);
+    if ($stat['code'] != 200) {
+      $items[] = t('The Varnish control terminal is not responding at %server on port %port.', array('%server' => $server, '%port' => $port));
+    }
+    else {
+      $items[] = t('Varnish running. Observe more detailed statistics !link.', array('!link' => l(t('here'), 'admin/reports/varnish')));
+    }
+    $form['varnish_stats']['#value'] = theme('item_list', $items);
   }
-  else {
-    $form['varnish_stats']['#value'] = t('Varnish running. Observe more detailed statistics !link.', array('!link' => l(t('here'), 'admin/reports/varnish')));
-  }
-
   return system_settings_form($form);
 }
 
@@ -97,5 +95,8 @@ function varnish_admin_settings_form() {
 function varnish_admin_reports_page() {
   // connect to varnish and do a full status report
   $status = _varnish_terminal_run('stats');
-  return '<pre>'. $status['msg'] .'</pre>';
+  foreach($status as $stat) {
+    $output .= '<pre>'. $stat['msg'] .'</pre>';
+  }
+  return $output;
 }
