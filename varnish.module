@@ -195,7 +195,7 @@ function _varnish_terminal_run($command) {
     list($server, $port) = explode(':', $terminal);
     $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
     if (!socket_connect($client, $server, $port)) {
-      watchdog('varnish', t('Unable to connect to server socket !server:!port', array('!server' => $server, '!port' => $port)));
+      watchdog('varnish', 'Unable to connect to server socket !server:!port', array('!server' => $server, '!port' => $port), WATCHDOG_ERROR);
       $ret[] = FALSE;
       break;
     }
@@ -213,8 +213,8 @@ function _varnish_terminal_run($command) {
 
       socket_write($client, "auth $key\n");
       $status = _varnish_read_socket($client);
-      if ($status['code'] == 200) {
-        watchdog('varnish', t('Authentication to server successfully!'));
+      if ($status['code'] != 200) {
+        watchdog('varnish', 'Authentication to server failed!', array(), WATCHDOG_ERROR);
       }
     }
 
@@ -224,7 +224,7 @@ function _varnish_terminal_run($command) {
     $status = _varnish_read_socket($client);
     
     if ($status['code'] != 200) {
-      watchdog('varnish', t('Recieved status code !code running !command. Full response text: !error', array('!code' => $status['code'], '!command' => $command, '!error' => $status['msg'])));
+      watchdog('varnish', 'Recieved status code !code running %command. Full response text: !error', array('!code' => $status['code'], '%command' => $command, '!error' => $status['msg']), WATCHDOG_ERROR);
       $ret[] = FALSE;
     }
     else {
@@ -242,7 +242,7 @@ function _varnish_read_socket($client) {
   $header = socket_read($client, 13, PHP_BINARY_READ);
   if ($header == FALSE) {
     $error = socket_last_error();
-    watchdog('varnish', t('Socket error: !error', array('!error' => socket_strerror($error))));
+    watchdog('varnish', 'Socket error: !error', array('!error' => socket_strerror($error)), WATCHDOG_ERROR);
   }
   $msg_len = (int)substr($header,4,6) + 1;
   $status = array(
