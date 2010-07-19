@@ -58,7 +58,7 @@ function varnish_requirements($phase) {
     $status = _varnish_terminal_run('status');
     $terminals = explode(' ', variable_get('varnish_control_terminal', '127.0.0.1:6082'));
     foreach ($terminals as $term) {
-      list($server, $port) = explode(':', $terminal);
+      list($server, $port) = explode(':', $term);
       $stat = array_shift($status);
       if ($stat['code'] === FALSE) {
         $requirements['varnish']['value'] = t('Varnish connection broken');
