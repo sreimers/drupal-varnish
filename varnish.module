@@ -1,9 +1,9 @@
 <?php
 // $Id:
 
-define ('VARNISH_NO_CLEAR', 0);
-define ('VARNISH_DEFAULT_CLEAR', 1);
-define ('VARNISH_SELECTIVE_CLEAR', 2); // Requires Expire.module to be enabled.
+define (VARNISH_NO_CLEAR, 0);
+define (VARNISH_DEFAULT_CLEAR, 1);
+define (VARNISH_SELECTIVE_CLEAR, 2);
 
 /**
  * @file varnish.module
@@ -18,20 +18,27 @@ define ('VARNISH_SELECTIVE_CLEAR', 2); // Requires Expire.module to be enabled.
  */
 function varnish_menu() {
   $items = array();
-  $items['admin/settings/varnish'] = array(
+  $items[] = array(
+    'path' => 'admin/settings/varnish',
     'title' => 'Varnish settings',
     'description' => 'Configure your varnish integration.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('varnish_admin_settings_form'),
-    'access arguments' => array('administer varnish'),
-    'file' => 'varnish.admin.inc',
+    'callback' => 'drupal_get_form',
+    'callback arguments' => array('varnish_admin_settings_form'),
+    'access' => user_access('administer varnish'),
   );
-  $items['admin/reports/varnish'] = array(
+  $items[] = array(
+    'path' => 'admin/reports/varnish',
     'title' => 'Varnish status',
-    'description' => 'Get the output of varnishstat.',
-    'page callback' => 'varnish_admin_reports_page',
-    'access arguments' => array('administer varnish'),
-    'file' => 'varnish.admin.inc',
+    'description' => 'Configure your varnish integration.',
+    'callback' => 'varnish_admin_reports_page',
+    'access' => user_access('administer varnish'),
+  );
+  $items[] = array(
+    'path' => 'admin/settings/varnish/cache-clear',
+    'title' => 'Clear Varnish cache',
+    'description' => 'Clear your varnish integration.',
+    'callback' => 'varnish_flush_cache_manually',
+    'access' => user_access('administer varnish'),
   );
   return $items;
 }
@@ -55,20 +62,14 @@ function varnish_requirements($phase) {
     $requirements = array('varnish');
     $requirements['varnish']['title'] = t('Varnish status');
     // try a varnish admin connect, report results
-    $status = _varnish_terminal_run('status');
-    $terminals = explode(' ', variable_get('varnish_control_terminal', '127.0.0.1:6082'));
-    foreach ($terminals as $term) {
-      list($server, $port) = explode(':', $term);
-      $stat = array_shift($status);
-      if ($stat['code'] === FALSE) {
-        $requirements['varnish']['value'] = t('Varnish connection broken');
-        $requirements['varnish']['severity'] = REQUIREMENT_ERROR;
-        $requirements['varnish']['description'] = t('The Varnish control terminal is not responding at %server on port %port.', array('%server' => $server, '%port' => $port));
-        return $requirements;
-      }
-      else {
-        $requirements['varnish']['value'] = t('Varnish running. Observe more detailed statistics !link.', array('!link' => l(t('here'), 'admin/reports/varnish')));
-      }
+    $status = _varnish_terminal_run('status', 300);
+    if (strpos($status, 'Child in state running') === FALSE) {
+      $requirements['varnish']['value'] = t('Varnish connection broken');
+      $requirements['varnish']['severity'] = REQUIREMENT_ERROR;
+      $requirements['varnish']['description'] = t('The Varnish control terminal is not responding at %server on port %port.', array('%server' => variable_get('varnish_control_terminal_server', '127.0.0.1'), '%port' => variable_get('varnish_control_terminal_port', '6082')));
+    }
+    else {
+      $requirements['varnish']['value'] = t('Varnish running. Observe more detailed statistics !link.', array('!link' => l(t('here'), 'admin/reports/varnish')));
     }
     return $requirements;
   }
@@ -79,15 +80,15 @@ function varnish_requirements($phase) {
  *
  * Used to pick up cache_clearing events
  */
-function varnish_nodeapi(&$node, $op) {
-  if ($op == 'insert' || $op == 'update') {
+function varnish_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
+    if ($op == 'insert' || $op == 'update') {
     // We've probably just run through node_save, and normally this is where
     // Drupal calls a cache_clear_all().
     switch (variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR)) {
       case VARNISH_DEFAULT_CLEAR:
         varnish_purge_all_pages();
         break;
-    }
+    }    
   }
 }
 
@@ -104,24 +105,10 @@ function varnish_comment($comment, $op) {
     case 'unpublish':
     case 'delete':
       if (variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
-        varnish_purge_all_pages();
+        varnish_purge_all_pages(); 
       }
       break;
   }
-}
-
-/**
- * Implementation of hook_expire_cache
- *
- * Takes an array from expire.module and issue purges.
- *
- * You may also safely call this function directly with an array of local urls to purge.
- */
-function varnish_expire_cache($paths) {
-  $host = _varnish_get_host();
-  $base = base_path();
-  $purge = implode('$|^'. $base, $paths);
-   _varnish_terminal_run('purge req.http.host ~ '. $host .' && req.url ~ "^'. $base . $purge .'$"');
 }
 
 /**
@@ -129,9 +116,9 @@ function varnish_expire_cache($paths) {
  *
  * Add our submit callback to the "clear caches" button.
  */
-function varnish_form_alter(&$form, $form_state, $form_id) {
+function varnish_form_alter($form_id, &$form) {
   if ($form_id == 'system_performance_settings') {
-    $form['clear_cache']['clear']['#submit'][] = 'varnish_purge_all_pages';
+    $form['#submit']['varnish_purge_all_pages'] = array();
   }
 }
 
@@ -142,7 +129,17 @@ function varnish_form_alter(&$form, $form_state, $form_id) {
  *
  * This borrows logic from cache_clear_all() to respect cache_lifetime.
  */
-function varnish_flush_caches() {
+function varnish_flush_cache_manually() {
+  $destination = referer_uri();
+  varnish_purge_all_pages();
+  drupal_set_message('Varnish cache cleared.');
+  drupal_goto($destination);
+}
+
+/**
+ * Implementation of hook_cron
+ */
+function varnish_cron() {
   if (variable_get('varnish_flush_cron', 0)) {
     if (variable_get('cache_lifetime', 0)) {
       $cache_flush = variable_get('cache_flush_varnish', 0);
@@ -151,6 +148,7 @@ function varnish_flush_caches() {
         variable_set('cache_flush_varnish', time());
       }
       else if (time() > ($cache_flush + variable_get('cache_lifetime', 0))) {
+        variable_set('cache_flush_varnish', 0);
         varnish_purge_all_pages();
       }
     }
@@ -178,77 +176,146 @@ function _varnish_get_host() {
   return $parts['host'];
 }
 
+/**
+ * Extensible logic function to get other urls to clear.
+ *
+ * TODO: Merge this with boost logic.
+ */
+function varnish_get_active_urls($node) {
+  $urls = array();
+  $urls[] = 'node/'. $node->nid;
+  if ($node->type == 'blog') {
+    $urls[] = 'blog';
+    $urls[] = 'blog/'. $node->uid;
+  }
+    // lots more here...
+  foreach ($urls as $url) {
+    $alias = drupal_get_path_alias($url); // TODO: languages?
+    if ($alias != $url) {
+      $urls[] = $alias;
+    }
+  }
+  return $urls;
+}
+
 
 /**
  * Helper function that sends commands to Varnish
  *
  * Utilizes sockets to talk to varnish terminal.
  */
-function _varnish_terminal_run($command) {
+function _varnish_terminal_run($command, $returnlength = 1000) {
   if (!extension_loaded('sockets')) {
-    // Prevent fatal errors if people don't have requirements.
+    drupal_set_message(t('Sockets extension not enabled. Varnish terminal communication aborted.'), 'error');
     return FALSE;
   }
-  $ret = array();
-  $terminals = explode(' ', variable_get('varnish_control_terminal', '127.0.0.1:6082'));
-  foreach ($terminals as $terminal) {
-    list($server, $port) = explode(':', $terminal);
-    $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
-    if (!socket_connect($client, $server, $port)) {
-      watchdog('varnish', 'Unable to connect to server socket !server:!port', array('!server' => $server, '!port' => $port), WATCHDOG_ERROR);
-      $ret[] = FALSE;
-      break;
-    }
-  
-    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>0, 'usec'=>50));
-  
-    // If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
-    $status = _varnish_read_socket($client);
-
-    // Do we need to authenticate?
-    if ($status['code'] == 107) { // Require authentication
-      $challenge = substr($status['msg'], 0, 32);
-      $pack = $challenge ."\x0A". $secret ."\x0A". $challenge ."\x0A";
-      $key = hash('sha256', $pack);
-
-      socket_write($client, "auth $key\n");
-      $status = _varnish_read_socket($client);
-      if ($status['code'] != 200) {
-        watchdog('varnish', 'Authentication to server failed!', array(), WATCHDOG_ERROR);
-      }
-    }
-
-  
-    // Send command and get response.
-    $result = socket_write($client, "$command\n");
-    $status = _varnish_read_socket($client);
-    
-    if ($status['code'] != 200) {
-      watchdog('varnish', 'Recieved status code !code running %command. Full response text: !error', array('!code' => $status['code'], '%command' => $command, '!error' => $status['msg']), WATCHDOG_ERROR);
-      $ret[] = FALSE;
-    }
-    else {
-      // successful connection
-      $ret[] = $status;
-    }
-    socket_close($client);
+  $server = variable_get('varnish_control_terminal_server', '127.0.0.1');
+  $port = variable_get('varnish_control_terminal_port', '6082');
+  $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
+  if (!socket_connect($client, $server, $port)) {
+    watchdog('varnish', t('Unable to connect to server socket !server:!port', array('!server' => $server, '!port' => $port)));
+    return FALSE;
   }
+  socket_write($client, "$command\n");
+  $code = socket_read($client, 3, PHP_BINARY_READ);
+  if ($code != 200) {
+    $error = socket_read($client, 3000, PHP_BINARY_READ);
+    watchdog('varnish', t('Recieved status code !code running !command. Full response text: !error', array('!code' => $code, '!command' => $command, '!error' => $error)));
+    $ret = FALSE;
+  }
+  else {
+    // successful connection
+    $ret = socket_read($client, $returnlength, PHP_BINARY_READ);
+  }
+  socket_close($client);
   
   return $ret;
 }
 
-function _varnish_read_socket($client) {
-  // status and length info is always 13 characters. 
-  $header = socket_read($client, 13, PHP_BINARY_READ);
-  if ($header == FALSE) {
-    $error = socket_last_error();
-    watchdog('varnish', 'Socket error: !error', array('!error' => socket_strerror($error)), WATCHDOG_ERROR);
-  }
-  $msg_len = (int)substr($header,4,6) + 1;
-  $status = array(
-    'code' => substr($header,0,3),
-    'msg' => socket_read($client, $msg_len, PHP_BINARY_READ)
+/**
+* Menu callback for varnish admin settings.
+*/
+function varnish_admin_settings_form() {
+  $form = array();
+  
+  // Decide whether or not to flush caches on cron runs.
+  $form['varnish_flush_cron'] = array(
+    '#type' => 'radios',
+    '#title' => t('Flush page cache on cron?'),
+    '#options' => array(
+      0 => t('Disabled'), 
+      1 => t('Enabled (with respect for cache_lifetime)'),
+    ),
+    '#default_value' => variable_get('varnish_flush_cron', 0),
+    '#description' => t('Internally Drupal will attempt to flush its page cache every time cron.php runs. This can mean too-frequent cache flushes if you have cron running frequently. NOTE: this cache flush is global!'),
   );
   
-  return $status;
+  if (!extension_loaded('sockets')) {
+    drupal_set_message(t('Sockets extension not enabled. Varnish terminal communication configuration skipped.'), 'error');
+    return system_settings_form($form);
+  }
+  
+  // Begin socket-dependent configuration.
+  
+  $form['varnish_control_terminal_server'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Varnish Control Terminal Server'),
+    '#default_value' => variable_get('varnish_control_terminal_server', '127.0.0.1'),
+    '#required' => TRUE,    
+    '#description' => t('Set this to the server IP or hostname that varnish runs on. This must be configured for Drupal to talk to Varnish.'),
+  );
+  $form['varnish_control_terminal_port'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Varnish Control Terminal Server'),
+    '#default_value' => variable_get('varnish_control_terminal_port', '6082'),
+    '#required' => TRUE,
+    '#description' => t('Set this to the port on which your varnish control terminal runs. This must be configured for Drupal to talk to Varnish.'),
+  );
+  $form['varnish_control_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Varnish Control Key'),
+    '#default_value' => variable_get('varnish_control_key', ''),
+    '#description' => t('Optional: if you have established a secret key for control terminal access, please put it here.'),
+  );
+  $form['varnish_cache_clear'] = array(
+    '#type' => 'radios',
+    '#title' => t('Varnish Cache Clearing'),
+    '#options' => array(
+      VARNISH_DEFAULT_CLEAR => t('Drupal Default'), 
+      VARNISH_NO_CLEAR => t('None'),
+    ),
+    '#default_value' => variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR),
+    '#description' => t('What kind of cache clearing Varnish should utilize. "Drupal Default" will clear the entire Varnish page cache on node updates, comment updates/additions, and/or other cache flush events. "None" will allow stale pages to persist when nodes and comments are added, and all other Drupal-based cache clearing events (except for cron run varnish cache clearing if you have that enabled).'),
+  );
+  $form['varnish_stats'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => FALSE,
+    '#title' => t('Stats'),
+  );
+  if ($_GET['stats'] == 1) {  
+    $status = _varnish_terminal_run('stats', 50000);
+    $form['varnish_stats']['#collapsed'] = FALSE;
+  }
+  else {
+    $status = l(t('Fetch stats'), 'admin/settings/varnish', array(), 'stats=1');
+    $form['varnish_stats']['#collapsed'] = TRUE;
+  }
+  $form['varnish_stats']['data'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<pre>',
+    '#suffic' => '</pre>',
+    '#value' => $status,
+  );
+  
+  return system_settings_form($form);
+}
+
+
+/**
+* Menu callback for varnish admin settings.
+*/
+function varnish_admin_reports_page() {
+  // connect to varnish and do a full status report
+  $status = _varnish_terminal_run('stats', 50000);
+  return "<pre>$status</pre>";
 }

@@ -1,1 +1,11 @@
-Coming soon, a great README.
+This Drupal 5 version of the varnish.module requires Pressflow for Drupal5. More information about setting Varnish up is available at:
+
+
+Project Mercury Documentation
+http://groups.drupal.org/pantheon/documentation
+
+Varnish and Drupal
+http://varnish-cache.org/wiki/VarnishAndDrupal
+
+Example Varnish VCL for a Drupal / Pressflow site
+http://highervisibilitywebsites.com/example-varnish-vcl-drupal-pressflow-site

@@ -1,5 +1,5 @@
 ; $Id$
 name = Varnish 
 description = "Provides integration with the Varnish HTTP accelerator."
-core = 6.x
+core = 5.x
 package = Caching
