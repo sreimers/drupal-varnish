@@ -26,6 +26,12 @@ function varnish_menu() {
     'access arguments' => array('administer varnish'),
     'file' => 'varnish.admin.inc',
   );
+  $items['admin/settings/varnish/general'] = array(
+    'title' => 'General',
+    'description' => 'Configure Varnish servers and cache invalidation settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -5,
+  );
   $items['admin/reports/varnish'] = array(
     'title' => 'Varnish status',
     'description' => 'Get the output of varnishstat.',
