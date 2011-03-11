@@ -86,14 +86,11 @@ function varnish_requirements($phase) {
  * Used to pick up cache_clearing events
  */
 function varnish_nodeapi(&$node, $op) {
-  if ($op == 'insert' || $op == 'update') {
     // We've probably just run through node_save, and normally this is where
     // Drupal calls a cache_clear_all().
-    switch (variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR)) {
-      case VARNISH_DEFAULT_CLEAR:
+  if (in_array($op, array('insert', 'update', 'delete', 'delete revision'))
+    && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
         varnish_purge_all_pages();
-        break;
-    }
   }
 }
 
@@ -103,16 +100,21 @@ function varnish_nodeapi(&$node, $op) {
  * Used to pick up cache_clearing events
  */
 function varnish_comment($comment, $op) {
-  switch ($op) {
-    case 'insert':
-    case 'update':
-    case 'publish':
-    case 'unpublish':
-    case 'delete':
-      if (variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
+  if (in_array($op, array('insert', 'update', 'publish', 'unpublish', 'delete'))
+    && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
         varnish_purge_all_pages();
       }
-      break;
+}
+
+/**
+ * Implements hook_user().
+ *
+ * Flush cache on user modifications.
+ */
+function varnish_user($op, &$edit, &$account, $category = NULL) {
+  if (in_array($op, array('insert', 'delete', 'after update'))
+    && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
+      varnish_purge_all_pages();
   }
 }
 
