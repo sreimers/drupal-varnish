@@ -1,5 +1,4 @@
 <?php
-// $Id:
 
 define ('VARNISH_NO_CLEAR', 0);
 define ('VARNISH_DEFAULT_CLEAR', 1);
@@ -206,11 +205,12 @@ function _varnish_terminal_run($command) {
     if (!socket_connect($client, $server, $port)) {
       watchdog('varnish', 'Unable to connect to server socket !server:!port', array('!server' => $server, '!port' => $port), WATCHDOG_ERROR);
       $ret[] = FALSE;
-      break;
+      // If a varnish server is unavailable, move on to the next in the list.
+      continue;
     }
-  
+
     socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>0, 'usec'=>50));
-  
+
     // If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
     $status = _varnish_read_socket($client);
 
@@ -229,11 +229,10 @@ function _varnish_terminal_run($command) {
       }
     }
 
-  
     // Send command and get response.
     $result = socket_write($client, "$command\n");
     $status = _varnish_read_socket($client);
-    
+
     if ($status['code'] != 200) {
       watchdog('varnish', 'Recieved status code !code running %command. Full response text: !error', array('!code' => $status['code'], '%command' => $command, '!error' => $status['msg']), WATCHDOG_ERROR);
       $ret[] = FALSE;
