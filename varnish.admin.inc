@@ -1,15 +1,17 @@
 <?php
-// $Id:
+// $Id$
 
 /**
- * @file varnish.admin.inc
+ * @file
+ * varnish.admin.inc
+ *
  * Administrative functions for Varnish integration.
  */
  
  
 /**
-* Menu callback for varnish admin settings.
-*/
+ * Menu callback for varnish admin settings.
+ */
 function varnish_admin_settings_form() {
   $form = array();
   
@@ -98,12 +100,13 @@ function varnish_admin_settings_form() {
 
 
 /**
-* Menu callback for varnish admin settings.
-*/
+ * Menu callback for varnish admin settings.
+ */
 function varnish_admin_reports_page() {
   // connect to varnish and do a full status report
   $status = _varnish_terminal_run('stats');
-  foreach($status as $stat) {
+  $output = '';
+  foreach ($status as $stat) {
     $output .= '<pre>'. $stat['msg'] .'</pre>';
   }
   return $output;
