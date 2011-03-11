@@ -1,9 +1,9 @@
 <?php
-// $Id:
 
 define ('VARNISH_NO_CLEAR', 0);
 define ('VARNISH_DEFAULT_CLEAR', 1);
 define ('VARNISH_SELECTIVE_CLEAR', 2); // Requires Expire.module to be enabled.
+define ('VARNISH_DEFAULT_TIMETOUT', 100); // 100ms
 
 /**
  * @file varnish.module
@@ -25,6 +25,12 @@ function varnish_menu() {
     'page arguments' => array('varnish_admin_settings_form'),
     'access arguments' => array('administer varnish'),
     'file' => 'varnish.admin.inc',
+  );
+  $items['admin/settings/varnish/general'] = array(
+    'title' => 'General',
+    'description' => 'Configure Varnish servers and cache invalidation settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -5,
   );
   $items['admin/reports/varnish'] = array(
     'title' => 'Varnish status',
@@ -80,14 +86,11 @@ function varnish_requirements($phase) {
  * Used to pick up cache_clearing events
  */
 function varnish_nodeapi(&$node, $op) {
-  if ($op == 'insert' || $op == 'update') {
     // We've probably just run through node_save, and normally this is where
     // Drupal calls a cache_clear_all().
-    switch (variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR)) {
-      case VARNISH_DEFAULT_CLEAR:
+  if (in_array($op, array('insert', 'update', 'delete', 'delete revision'))
+    && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
         varnish_purge_all_pages();
-        break;
-    }
   }
 }
 
@@ -97,16 +100,21 @@ function varnish_nodeapi(&$node, $op) {
  * Used to pick up cache_clearing events
  */
 function varnish_comment($comment, $op) {
-  switch ($op) {
-    case 'insert':
-    case 'update':
-    case 'publish':
-    case 'unpublish':
-    case 'delete':
-      if (variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
+  if (in_array($op, array('insert', 'update', 'publish', 'unpublish', 'delete'))
+    && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
         varnish_purge_all_pages();
-      }
-      break;
+  }
+}
+
+/**
+ * Implements hook_user().
+ *
+ * Flush cache on user modifications.
+ */
+function varnish_user($op, &$edit, &$account, $category = NULL) {
+  if (in_array($op, array('insert', 'delete', 'after update'))
+    && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
+      varnish_purge_all_pages();
   }
 }
 
@@ -150,7 +158,7 @@ function varnish_flush_caches() {
         // This is the first request to clear the cache, start a timer.
         variable_set('cache_flush_varnish', time());
       }
-      else if (time() > ($cache_flush + variable_get('cache_lifetime', 0))) {
+      elseif (time() > ($cache_flush + variable_get('cache_lifetime', 0))) {
         varnish_purge_all_pages();
       }
     }
@@ -191,38 +199,46 @@ function _varnish_terminal_run($command) {
   }
   $ret = array();
   $terminals = explode(' ', variable_get('varnish_control_terminal', '127.0.0.1:6082'));
+  
   foreach ($terminals as $terminal) {
     list($server, $port) = explode(':', $terminal);
     $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
-    if (!socket_connect($client, $server, $port)) {
-      watchdog('varnish', 'Unable to connect to server socket !server:!port', array('!server' => $server, '!port' => $port), WATCHDOG_ERROR);
+    if (@!socket_connect($client, $server, $port)) {
+      watchdog('varnish', 'Unable to connect to server socket !server:!port: %error', array(
+        '!server' => $server,
+        '!port' => $port,
+        '%error' => socket_strerror(socket_last_error($client))
+        ), WATCHDOG_ERROR);
       $ret[] = FALSE;
-      break;
+      // If a varnish server is unavailable, move on to the next in the list.
+      continue;
     }
-  
-    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>0, 'usec'=>50));
-  
+
+    $timeout = variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMETOUT);
+    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => (int) ($timeout / 1000), 'usec' => 0));
+
     // If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
     $status = _varnish_read_socket($client);
 
     // Do we need to authenticate?
     if ($status['code'] == 107) { // Require authentication
-      $challenge = substr($status['msg'], 0, 32);
-      $pack = $challenge ."\x0A". $secret ."\x0A". $challenge ."\x0A";
-      $key = hash('sha256', $pack);
-
-      socket_write($client, "auth $key\n");
-      $status = _varnish_read_socket($client);
-      if ($status['code'] != 200) {
-        watchdog('varnish', 'Authentication to server failed!', array(), WATCHDOG_ERROR);
+      if (variable_get('varnish_legacy', 0) != 1) {
+        $secret = variable_get('varnish_control_key', '');
+        $challenge = substr($status['msg'], 0, 32);
+        $pack = $challenge ."\x0A". $secret ."\x0A". $challenge ."\x0A";
+        $key = hash('sha256', $pack);
+        socket_write($client, "auth $key\n");
+        $status = _varnish_read_socket($client);
+        if ($status['code'] != 200) {
+          watchdog('varnish', 'Authentication to server failed!', array(), WATCHDOG_ERROR);
+        }
       }
     }
 
-  
     // Send command and get response.
     $result = socket_write($client, "$command\n");
     $status = _varnish_read_socket($client);
-    
+
     if ($status['code'] != 200) {
       watchdog('varnish', 'Recieved status code !code running %command. Full response text: !error', array('!code' => $status['code'], '%command' => $command, '!error' => $status['msg']), WATCHDOG_ERROR);
       $ret[] = FALSE;
@@ -244,9 +260,9 @@ function _varnish_read_socket($client) {
     $error = socket_last_error();
     watchdog('varnish', 'Socket error: !error', array('!error' => socket_strerror($error)), WATCHDOG_ERROR);
   }
-  $msg_len = (int)substr($header,4,6) + 1;
+  $msg_len = (int) substr($header, 4, 6) + 1;
   $status = array(
-    'code' => substr($header,0,3),
+    'code' => substr($header, 0, 3),
     'msg' => socket_read($client, $msg_len, PHP_BINARY_READ)
   );
   

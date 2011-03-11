@@ -1,15 +1,16 @@
 <?php
-// $Id:
 
 /**
- * @file varnish.admin.inc
+ * @file
+ * varnish.admin.inc
+ *
  * Administrative functions for Varnish integration.
  */
  
  
 /**
-* Menu callback for varnish admin settings.
-*/
+ * Menu callback for varnish admin settings.
+ */
 function varnish_admin_settings_form() {
   $form = array();
   
@@ -31,6 +32,14 @@ function varnish_admin_settings_form() {
     '#default_value' => variable_get('varnish_flush_cron', 0),
     '#description' => t('Internally Drupal will attempt to flush its page cache every time cron.php runs. This can mean too-frequent cache flushes if you have cron running frequently. NOTE: this cache flush is global!'),
   );
+
+  $form['varnish_legacy'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Varnish Legacy Mode'),
+    '#default_value' => variable_get('varnish_legacy', 0),
+    '#required' => TRUE,
+    '#description' => t('Check this if you use a version of varnish lower than 2.1'),
+  );
       
   $form['varnish_control_terminal'] = array(
     '#type' => 'textfield',
@@ -44,6 +53,13 @@ function varnish_admin_settings_form() {
     '#title' => t('Varnish Control Key'),
     '#default_value' => variable_get('varnish_control_key', ''),
     '#description' => t('Optional: if you have established a secret key for control terminal access, please put it here.'),
+  );
+  $form['varnish_socket_timeout'] = array(
+   '#type' => 'textfield',
+   '#title' => t('Varnish connection timeout (milliseconds)'),
+   '#default_value' => variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMETOUT),
+   '#description' => t('If Varnish is running on a different server, you may need to increase this value.'),
+   '#required' => TRUE,
   );
   $form['varnish_cache_clear'] = array(
     '#type' => 'radios',
@@ -88,14 +104,24 @@ function varnish_admin_settings_form() {
   return system_settings_form($form);
 }
 
+function varnish_admin_settings_form_validate($form, &$form_state) {
+  if (!is_numeric($form_state['values']['varnish_socket_timeout']) || $form_state['values']['varnish_socket_timeout'] < 0) {
+    form_set_error('varnish_socket_timeout', t('Varnish connection timeout must be a positive number.'));
+  }
+  else {
+    $form_state['values']['varnish_socket_timeout'] = (int) $form_state['values']['varnish_socket_timeout'];
+  }
+}
+
 
 /**
-* Menu callback for varnish admin settings.
-*/
+ * Menu callback for varnish admin settings.
+ */
 function varnish_admin_reports_page() {
   // connect to varnish and do a full status report
   $status = _varnish_terminal_run('stats');
-  foreach($status as $stat) {
+  $output = '';
+  foreach ($status as $stat) {
     $output .= '<pre>'. $stat['msg'] .'</pre>';
   }
   return $output;
