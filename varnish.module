@@ -202,8 +202,12 @@ function _varnish_terminal_run($command) {
   foreach ($terminals as $terminal) {
     list($server, $port) = explode(':', $terminal);
     $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
-    if (!socket_connect($client, $server, $port)) {
-      watchdog('varnish', 'Unable to connect to server socket !server:!port', array('!server' => $server, '!port' => $port), WATCHDOG_ERROR);
+    if (@!socket_connect($client, $server, $port)) {
+      watchdog('varnish', 'Unable to connect to server socket !server:!port: %error', array(
+        '!server' => $server,
+        '!port' => $port,
+        '%error' => socket_strerror(socket_last_error($client))
+        ), WATCHDOG_ERROR);
       $ret[] = FALSE;
       // If a varnish server is unavailable, move on to the next in the list.
       continue;
