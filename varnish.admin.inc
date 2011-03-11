@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * @file
@@ -55,6 +54,13 @@ function varnish_admin_settings_form() {
     '#default_value' => variable_get('varnish_control_key', ''),
     '#description' => t('Optional: if you have established a secret key for control terminal access, please put it here.'),
   );
+  $form['varnish_socket_timeout'] = array(
+   '#type' => 'textfield',
+   '#title' => t('Varnish connection timeout (milliseconds)'),
+   '#default_value' => variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMETOUT),
+   '#description' => t('If Varnish is running on a different server, you may need to increase this value.'),
+   '#required' => TRUE,
+  );
   $form['varnish_cache_clear'] = array(
     '#type' => 'radios',
     '#title' => t('Varnish Cache Clearing'),
@@ -96,6 +102,15 @@ function varnish_admin_settings_form() {
     $form['varnish_stats']['#value'] = theme('item_list', $items);
   }
   return system_settings_form($form);
+}
+
+function varnish_admin_settings_form_validate($form, &$form_state) {
+  if (!is_numeric($form_state['values']['varnish_socket_timeout']) || $form_state['values']['varnish_socket_timeout'] < 0) {
+    form_set_error('varnish_socket_timeout', t('Varnish connection timeout must be a positive number.'));
+  }
+  else {
+    $form_state['values']['varnish_socket_timeout'] = (int) $form_state['values']['varnish_socket_timeout'];
+  }
 }
 
 

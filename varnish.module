@@ -3,6 +3,7 @@
 define ('VARNISH_NO_CLEAR', 0);
 define ('VARNISH_DEFAULT_CLEAR', 1);
 define ('VARNISH_SELECTIVE_CLEAR', 2); // Requires Expire.module to be enabled.
+define('VARNISH_DEFAULT_TIMETOUT', 100); // 100ms
 
 /**
  * @file varnish.module
@@ -157,7 +158,7 @@ function varnish_flush_caches() {
         // This is the first request to clear the cache, start a timer.
         variable_set('cache_flush_varnish', time());
       }
-      else if (time() > ($cache_flush + variable_get('cache_lifetime', 0))) {
+      elseif (time() > ($cache_flush + variable_get('cache_lifetime', 0))) {
         varnish_purge_all_pages();
       }
     }
@@ -213,7 +214,8 @@ function _varnish_terminal_run($command) {
       continue;
     }
 
-    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>0, 'usec'=>50));
+    $timeout = variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMETOUT);
+    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => (int) ($timeout / 1000), 'usec' => 0));
 
     // If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
     $status = _varnish_read_socket($client);
@@ -258,9 +260,9 @@ function _varnish_read_socket($client) {
     $error = socket_last_error();
     watchdog('varnish', 'Socket error: !error', array('!error' => socket_strerror($error)), WATCHDOG_ERROR);
   }
-  $msg_len = (int)substr($header,4,6) + 1;
+  $msg_len = (int) substr($header, 4, 6) + 1;
   $status = array(
-    'code' => substr($header,0,3),
+    'code' => substr($header, 0, 3),
     'msg' => socket_read($client, $msg_len, PHP_BINARY_READ)
   );
   
