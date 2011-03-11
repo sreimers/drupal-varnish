@@ -191,6 +191,7 @@ function _varnish_terminal_run($command) {
   }
   $ret = array();
   $terminals = explode(' ', variable_get('varnish_control_terminal', '127.0.0.1:6082'));
+  
   foreach ($terminals as $terminal) {
     list($server, $port) = explode(':', $terminal);
     $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
@@ -207,15 +208,16 @@ function _varnish_terminal_run($command) {
 
     // Do we need to authenticate?
     if ($status['code'] == 107) { // Require authentication
-      $secret = variable_get('varnish_control_key', '');
-      $challenge = substr($status['msg'], 0, 32);
-      $pack = $challenge ."\x0A". $secret ."\x0A". $challenge ."\x0A";
-      $key = hash('sha256', $pack);
-
-      socket_write($client, "auth $key\n");
-      $status = _varnish_read_socket($client);
-      if ($status['code'] != 200) {
-        watchdog('varnish', 'Authentication to server failed!', array(), WATCHDOG_ERROR);
+      if (variable_get('varnish_legacy', 0) != 1) {
+        $secret = variable_get('varnish_control_key', '');
+        $challenge = substr($status['msg'], 0, 32);
+        $pack = $challenge ."\x0A". $secret ."\x0A". $challenge ."\x0A";
+        $key = hash('sha256', $pack);
+        socket_write($client, "auth $key\n");
+        $status = _varnish_read_socket($client);
+        if ($status['code'] != 200) {
+          watchdog('varnish', 'Authentication to server failed!', array(), WATCHDOG_ERROR);
+        }
       }
     }
 

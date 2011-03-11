@@ -31,6 +31,14 @@ function varnish_admin_settings_form() {
     '#default_value' => variable_get('varnish_flush_cron', 0),
     '#description' => t('Internally Drupal will attempt to flush its page cache every time cron.php runs. This can mean too-frequent cache flushes if you have cron running frequently. NOTE: this cache flush is global!'),
   );
+
+  $form['varnish_legacy'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Varnish Legacy Mode'),
+    '#default_value' => variable_get('varnish_legacy', 0),
+    '#required' => TRUE,
+    '#description' => t('Check this if you use a version of varnish lower than 2.1'),
+  );
       
   $form['varnish_control_terminal'] = array(
     '#type' => 'textfield',
