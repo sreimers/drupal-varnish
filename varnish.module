@@ -6,7 +6,8 @@ define ('VARNISH_SELECTIVE_CLEAR', 2); // Requires Expire.module to be enabled.
 define('VARNISH_DEFAULT_TIMETOUT', 100); // 100ms
 
 /**
- * @file varnish.module
+ * @file 
+ * varnish.module
  * Provide drupal hooks for integration with the Varnish control layer.
  */
  
