@@ -216,14 +216,13 @@ function _varnish_terminal_run($command) {
     }
 
     $timeout = variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMETOUT);
-    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => (int) ($timeout / 1000), 'usec' => 0));
+    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => 0, 'usec' => $timeout));
 
     // If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
-    $status = _varnish_read_socket($client);
-
-    // Do we need to authenticate?
-    if ($status['code'] == 107) { // Require authentication
-      if (variable_get('varnish_legacy', 0) != 1) {
+    if(variable_get('varnish_legacy', 0) != 1) {
+      $status = _varnish_read_socket($client);
+      // Do we need to authenticate?
+      if ($status['code'] == 107) { // Require authentication
         $secret = variable_get('varnish_control_key', '');
         $challenge = substr($status['msg'], 0, 32);
         $pack = $challenge ."\x0A". $secret ."\x0A". $challenge ."\x0A";
