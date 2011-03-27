@@ -113,7 +113,7 @@ function varnish_comment($comment, $op) {
  * Flush cache on user modifications.
  */
 function varnish_user($op, &$edit, &$account, $category = NULL) {
-  if (in_array($op, array('insert', 'delete', 'after update'))
+  if (in_array($op, array('insert', 'delete', 'after_update'))
     && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
       varnish_purge_all_pages();
   }
