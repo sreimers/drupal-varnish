@@ -200,10 +200,14 @@ function _varnish_terminal_run($command) {
   }
   $ret = array();
   $terminals = explode(' ', variable_get('varnish_control_terminal', '127.0.0.1:6082'));
-  
+  $timeout = variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMETOUT);
+  $seconds = (int)($timeout / 1000);
+  $milliseconds = (int)($timeout % 1000 * 1000);
   foreach ($terminals as $terminal) {
     list($server, $port) = explode(':', $terminal);
     $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
+    socket_set_option($client, SOL_SOCKET, SO_SNDTIMEO, array('sec' => $seconds, 'usec' => $milliseconds));
+    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => $seconds, 'usec' => $milliseconds));
     if (@!socket_connect($client, $server, $port)) {
       watchdog('varnish', 'Unable to connect to server socket !server:!port: %error', array(
         '!server' => $server,
@@ -214,12 +218,6 @@ function _varnish_terminal_run($command) {
       // If a varnish server is unavailable, move on to the next in the list.
       continue;
     }
-
-    $timeout = variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMETOUT);
-    $seconds = (int)($timeout / 1000);
-    $milliseconds = (int)($timeout % 1000 * 1000);
-    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => $seconds, 'usec' => $milliseconds));
-
     // If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
     if(variable_get('varnish_legacy', 0) != 1) {
       $status = _varnish_read_socket($client);
