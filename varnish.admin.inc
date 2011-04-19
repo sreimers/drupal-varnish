@@ -85,22 +85,9 @@ function varnish_admin_settings_form() {
   $form['varnish_stats'] = array(
     '#type' => 'item',
     '#title' => t('Status'),
+    '#value' => theme('varnish_status', varnish_get_status()),
   );
 
-  $status = _varnish_terminal_run('status');
-  $terminals = explode(' ', variable_get('varnish_control_terminal', '127.0.0.1:6082'));
-  $items = array();
-  foreach ($terminals as $terminal) {
-    list($server, $port) = explode(':', $terminal);
-    $stat = array_shift($status);
-    if ($stat['code'] != 200) {
-      $items[] = t('The Varnish control terminal is not responding at %server on port %port.', array('%server' => $server, '%port' => $port));
-    }
-    else {
-      $items[] = t('Varnish running. Observe more detailed statistics !link.', array('!link' => l(t('here'), 'admin/reports/varnish')));
-    }
-    $form['varnish_stats']['#value'] = theme('item_list', $items);
-  }
   return system_settings_form($form);
 }
 
