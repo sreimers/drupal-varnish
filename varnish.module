@@ -16,21 +16,21 @@ define('VARNISH_SERVER_STATUS_UP', 1);
  
 
 /**
- * Implementation of hook_menu()
+ * Implements hook_menu().
  *
  * Set up admin settings callbacks, etc.
  */
 function varnish_menu() {
   $items = array();
-  $items['admin/settings/varnish'] = array(
-    'title' => 'Varnish settings',
+  $items['admin/config/development/varnish'] = array(
+    'title' => 'Varnish',
     'description' => 'Configure your varnish integration.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('varnish_admin_settings_form'),
     'access arguments' => array('administer varnish'),
     'file' => 'varnish.admin.inc',
   );
-  $items['admin/settings/varnish/general'] = array(
+  $items['admin/config/development/varnish/general'] = array(
     'title' => 'General',
     'description' => 'Configure Varnish servers and cache invalidation settings',
     'type' => MENU_DEFAULT_LOCAL_TASK,
@@ -47,7 +47,7 @@ function varnish_menu() {
 }
 
 /**
- * Implementation of hook_theme().
+ * Implements of hook_theme().
  */
 function varnish_theme() {
   return array(
@@ -58,16 +58,21 @@ function varnish_theme() {
 }
 
 /** 
- * Implemetation of hook_perm()
+ * Implements hook_permisson().
  *
- * Allows admins to control access to varnish settings.
+ * Adds administer Varnish permission.
  */
-function varnish_perm() {
-  return array('administer varnish');
+function varnish_permission() {
+  return array(
+    'administer varnish' => array(
+      'title' => t('Administer Varnish'),
+      'description' => t('Perform administration tasks for varnish.'),
+    ),
+  );
 }
 
 /**
- * Implementation of hook_requirements()
+ * Implements of hook_requirements().
  *
  * Ensure that varnish's connection is good.
  */
@@ -96,48 +101,9 @@ function varnish_requirements($phase) {
 }
 
 /**
- * Implementation of hook_nodeapi()
- *
- * Used to pick up cache_clearing events
- */
-function varnish_nodeapi(&$node, $op) {
-    // We've probably just run through node_save, and normally this is where
-    // Drupal calls a cache_clear_all().
-  if (in_array($op, array('insert', 'update', 'delete', 'delete revision'))
-    && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
-        varnish_purge_all_pages();
-  }
-}
-
-/**
- * Implementation of hook_comment()
- *
- * Used to pick up cache_clearing events
- */
-function varnish_comment($comment, $op) {
-  if (in_array($op, array('insert', 'update', 'publish', 'unpublish', 'delete'))
-    && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
-        varnish_purge_all_pages();
-  }
-}
-
-/**
- * Implements hook_user().
- *
- * Flush cache on user modifications.
- */
-function varnish_user($op, &$edit, &$account, $category = NULL) {
-  if (in_array($op, array('insert', 'delete', 'after_update'))
-    && variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) == VARNISH_DEFAULT_CLEAR) {
-      varnish_purge_all_pages();
-  }
-}
-
-/**
- * Implementation of hook_expire_cache
+ * Implements of hook_expire_cache().
  *
  * Takes an array from expire.module and issue purges.
- *
  * You may also safely call this function directly with an array of local urls to purge.
  */
 function varnish_expire_cache($paths) {
@@ -148,7 +114,7 @@ function varnish_expire_cache($paths) {
 }
 
 /**
- * Implementation of hook_form_alter()
+ * Implements hook_form_alter().
  *
  * Add our submit callback to the "clear caches" button.
  */
@@ -159,7 +125,7 @@ function varnish_form_alter(&$form, $form_state, $form_id) {
 }
 
 /**
- * Implementation of hook_flush_caches()
+ * Implements of hook_flush_caches().
  *
  * Flush caches on events like cron.
  *
@@ -224,19 +190,19 @@ function theme_varnish_status($status) {
   foreach ($status as $terminal => $state) {
     list($server, $port) = explode(':', $terminal);
     if ($state == VARNISH_SERVER_STATUS_UP) {
-      $icon = theme('image', 'misc/watchdog-ok.png', "Server OK: {$server}:{$port}", "{$server}:{$port}");
+      $icon = theme('image', array('path' => 'misc/watchdog-ok.png', 'alt' => "Server OK: {$server}:{$port}", "{$server}:{$port}"));
       $items[] = t('!status_icon Varnish running. Observe more detailed statistics !link.', array('!status_icon' => $icon, '!link' => l(t('here'), 'admin/reports/varnish')));
     }
     else {
-      $icon = theme('image', 'misc/watchdog-error.png', 'Server down: {$server}:{$port}', "{$server}:{$port}");
+      $icon = theme('image', array('path' => 'misc/watchdog-error.png', 'alt' => 'Server down: {$server}:{$port}', "{$server}:{$port}"));
       $items[] = t('!status_icon The Varnish control terminal is not responding at %server on port %port.', array('!status_icon' => $icon, '%server' => $server, '%port' => $port));
     }
   }
-  return theme('item_list', $items);
+  return theme('item_list', array('items' => $items));
 }
 
 /**
- * Help[er function to parse the host from the global $base_url
+ * Helper function to parse the host from the global $base_url
  */
 function _varnish_get_host() {
   global $base_url;
@@ -246,8 +212,7 @@ function _varnish_get_host() {
 
 
 /**
- * Helper function that sends commands to Varnish
- *
+ * Helper function that sends commands to Varnish.
  * Utilizes sockets to talk to varnish terminal.
  */
 function _varnish_terminal_run($commands) {

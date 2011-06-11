@@ -1,12 +1,10 @@
 <?php
 /**
  * @file
- * varnish.admin.inc
  *
  * Administrative functions for Varnish integration.
  */
- 
- 
+
 /**
  * Menu callback for varnish admin settings.
  */
@@ -19,7 +17,7 @@ function varnish_admin_settings_form() {
   }
 
   // Begin socket-dependent configuration.
-  
+
   // Decide whether or not to flush caches on cron runs.
   $form['varnish_flush_cron'] = array(
     '#type' => 'radios',
@@ -73,10 +71,10 @@ function varnish_admin_settings_form() {
   // Detect expire module and add this option.
   if (module_exists('expire')) {
     $form['varnish_cache_clear']['#options'][VARNISH_SELECTIVE_CLEAR] = t('Selective (experimental; uses expire.module)');
-    $form['varnish_cache_clear']['#description'] .= ' '. t('Selective will clear a list of URLs you specify as well as any node urls themselves.');
+    $form['varnish_cache_clear']['#description'] .= ' ' . t('Selective will clear a list of URLs you specify as well as any node urls themselves.');
   }
   else {
-    $form['varnish_cache_clear']['#description'] .= ' '. t('Installing the !link will enable "Selective" clearing.', array('!link' => '<a href="http://drupal.org/project/expire" target="_blank">'. t('Expire module') .'</a>'));
+    $form['varnish_cache_clear']['#description'] .= ' ' . t('Installing the !link will enable "Selective" clearing.', array('!link' => '<a href="http://drupal.org/project/expire" target="_blank">'. t('Expire module') .'</a>'));
   }
 
   // Check status
@@ -103,7 +101,7 @@ function varnish_admin_settings_form_validate($form, &$form_state) {
  * Menu callback for varnish admin settings.
  */
 function varnish_admin_reports_page() {
-  // connect to varnish and do a full status report
+  // Connect to varnish and do a full status report.
   $status = _varnish_terminal_run(array('stats'));
   $output = '';
   foreach ($status as $terminal => $stat) {
