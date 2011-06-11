@@ -114,42 +114,6 @@ function varnish_expire_cache($paths) {
 }
 
 /**
- * Implements hook_form_alter().
- *
- * Add our submit callback to the "clear caches" button.
- */
-function varnish_form_alter(&$form, $form_state, $form_id) {
-  if ($form_id == 'system_performance_settings') {
-    $form['clear_cache']['clear']['#submit'][] = 'varnish_purge_all_pages';
-  }
-}
-
-/**
- * Implements of hook_flush_caches().
- *
- * Flush caches on events like cron.
- *
- * This borrows logic from cache_clear_all() to respect cache_lifetime.
- */
-function varnish_flush_caches() {
-  if (variable_get('varnish_flush_cron', 0)) {
-    if (variable_get('cache_lifetime', 0)) {
-      $cache_flush = variable_get('cache_flush_varnish', 0);
-      if ($cache_flush == 0) {
-        // This is the first request to clear the cache, start a timer.
-        variable_set('cache_flush_varnish', time());
-      }
-      elseif (time() > ($cache_flush + variable_get('cache_lifetime', 0))) {
-        varnish_purge_all_pages();
-      }
-    }
-    else {
-      varnish_purge_all_pages();
-    }
-  }
-}
-
-/**
  * Helper function to quickly flush all caches for the current site.
  */
 function varnish_purge_all_pages() {
