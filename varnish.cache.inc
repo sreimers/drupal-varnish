@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file
+ * Cache include file, to be used in settings.php file.
+ */
+
+/**
  * Varnish cache implementation.
  *
  * This cache implementation can be used together with Varnish. You can't really
@@ -34,7 +39,7 @@ class VarnishCache implements DrupalCacheInterface {
       (variable_get('varnish_flush_cron', 0) && lock_may_be_available('cron'))) {
       return;
     }
-    if (empty($cid)) {   
+    if (empty($cid)) {
       if (variable_get('cache_lifetime', 0)) {
         // We store the time in the current user's $user->cache variable which
         // will be saved into the sessions bin by _drupal_session_write(). We then
@@ -67,7 +72,7 @@ class VarnishCache implements DrupalCacheInterface {
           $host = _varnish_get_host();
           $base = base_path();
           $purge = $cid . '(.*)';
-          _varnish_terminal_run(array('purge req.http.host ~ '. $host .' && req.url ~ "^'. $base . $purge .'$"'));
+          _varnish_terminal_run(array('purge req.http.host ~ ' . $host . ' && req.url ~ "^' . $base . $purge . '$"'));
         }
       }
       elseif (is_array($cid)) {

@@ -9,11 +9,11 @@ define('VARNISH_SERVER_STATUS_UP', 1);
 
 
 /**
- * @file 
+ * @file
  * varnish.module
  * Provide drupal hooks for integration with the Varnish control layer.
  */
- 
+
 
 /**
  * Implements hook_menu().
@@ -47,7 +47,7 @@ function varnish_menu() {
 }
 
 /**
- * Implements of hook_theme().
+ * Implements hook_theme().
  */
 function varnish_theme() {
   return array(
@@ -57,7 +57,7 @@ function varnish_theme() {
   );
 }
 
-/** 
+/**
  * Implements hook_permisson().
  *
  * Adds administer Varnish permission.
@@ -72,7 +72,7 @@ function varnish_permission() {
 }
 
 /**
- * Implements of hook_requirements().
+ * Implements hook_requirements().
  *
  * Ensure that varnish's connection is good.
  */
@@ -101,7 +101,7 @@ function varnish_requirements($phase) {
 }
 
 /**
- * Implements of hook_expire_cache().
+ * Implements hook_expire_cache().
  *
  * Takes an array from expire.module and issue purges.
  * You may also safely call this function directly with an array of local urls to purge.
@@ -109,8 +109,8 @@ function varnish_requirements($phase) {
 function varnish_expire_cache($paths) {
   $host = _varnish_get_host();
   $base = base_path();
-  $purge = implode('$|^'. $base, $paths);
-  _varnish_terminal_run(array('purge req.http.host ~ '. $host .' && req.url ~ "^'. $base . $purge .'$"'));
+  $purge = implode('$|^' . $base, $paths);
+  _varnish_terminal_run(array('purge req.http.host ~ ' . $host . ' && req.url ~ "^' . $base . $purge . '$"'));
 }
 
 /**
@@ -209,13 +209,13 @@ function _varnish_terminal_run($commands) {
       continue;
     }
     // If there is a CLI banner message (varnish >= 2.1.x), try to read it and move on.
-    if(variable_get('varnish_legacy', 0) != 1) {
+    if (variable_get('varnish_legacy', 0) != 1) {
       $status = _varnish_read_socket($client);
       // Do we need to authenticate?
       if ($status['code'] == 107) { // Require authentication
         $secret = variable_get('varnish_control_key', '');
         $challenge = substr($status['msg'], 0, 32);
-        $pack = $challenge ."\x0A". $secret ."\x0A". $challenge ."\x0A";
+        $pack = $challenge . "\x0A" . $secret . "\x0A" . $challenge . "\x0A";
         $key = hash('sha256', $pack);
         socket_write($client, "auth $key\n");
         $status = _varnish_read_socket($client);
@@ -238,8 +238,8 @@ function _varnish_execute_command($client, $command) {
   $result = socket_write($client, "$command\n");
   $status = _varnish_read_socket($client);
   if ($status['code'] != 200) {
-     watchdog('varnish', 'Recieved status code !code running %command. Full response text: !error', array('!code' => $status['code'], '%command' => $command, '!error' => $status['msg']), WATCHDOG_ERROR);
-     return FALSE;
+    watchdog('varnish', 'Recieved status code !code running %command. Full response text: !error', array('!code' => $status['code'], '%command' => $command, '!error' => $status['msg']), WATCHDOG_ERROR);
+    return FALSE;
   }
   else {
     // successful connection
@@ -256,7 +256,7 @@ function _varnish_execute_command($client, $command) {
  *   $retty how many times to retry on "temporarily unavalble" errors
  */
 function _varnish_read_socket($client, $retry = 2) {
-  // status and length info is always 13 characters. 
+  // Status and length info is always 13 characters.
   $header = socket_read($client, 13, PHP_BINARY_READ);
   if ($header == FALSE) {
     $error = socket_last_error();
@@ -273,11 +273,10 @@ function _varnish_read_socket($client, $retry = 2) {
       );
     }
   }
-  $msg_len = (int) substr($header, 4, 6) + 1;
+  $msg_len = (int)substr($header, 4, 6) + 1;
   $status = array(
     'code' => substr($header, 0, 3),
     'msg' => socket_read($client, $msg_len, PHP_BINARY_READ)
   );
-  
   return $status;
 }

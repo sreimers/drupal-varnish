@@ -1,5 +1,4 @@
 <?php
-// $id$
 
 /**
  * @file
@@ -7,7 +6,7 @@
  */
 
 /**
- * Implementation of hook_drush_command().
+ * Implements hook_drush_command().
  */
 function varnish_drush_command() {
   $items = array();

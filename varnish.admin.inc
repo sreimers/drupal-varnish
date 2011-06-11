@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  *
@@ -10,7 +11,7 @@
  */
 function varnish_admin_settings_form() {
   $form = array();
-  
+
   if (!extension_loaded('sockets')) {
     drupal_set_message(t('<a href="http://php.net/manual/en/sockets.installation.php">PHP Sockets extension</a> not enabled. Varnish terminal communication configuration skipped.'), 'error');
     return system_settings_form($form);
@@ -23,7 +24,7 @@ function varnish_admin_settings_form() {
     '#type' => 'radios',
     '#title' => t('Flush page cache on cron?'),
     '#options' => array(
-      0 => t('Disabled'), 
+      0 => t('Disabled'),
       1 => t('Enabled (with respect for cache_lifetime)'),
     ),
     '#default_value' => variable_get('varnish_flush_cron', 0),
@@ -36,14 +37,15 @@ function varnish_admin_settings_form() {
     '#default_value' => variable_get('varnish_legacy', 0),
     '#description' => t('Check this if you use a version of varnish lower than 2.1'),
   );
-      
+
   $form['varnish_control_terminal'] = array(
     '#type' => 'textfield',
     '#title' => t('Varnish Control Terminal'),
     '#default_value' => variable_get('varnish_control_terminal', '127.0.0.1:6082'),
-    '#required' => TRUE,    
+    '#required' => TRUE,
     '#description' => t('Set this to the server IP or hostname that varnish runs on (e.g. 127.0.0.1:6082). This must be configured for Drupal to talk to Varnish. Separate multiple servers with spaces.'),
   );
+
   $form['varnish_control_key'] = array(
     '#type' => 'textfield',
     '#title' => t('Varnish Control Key'),
@@ -61,20 +63,20 @@ function varnish_admin_settings_form() {
     '#type' => 'radios',
     '#title' => t('Varnish Cache Clearing'),
     '#options' => array(
-      VARNISH_DEFAULT_CLEAR => t('Drupal Default'), 
+      VARNISH_DEFAULT_CLEAR => t('Drupal Default'),
       VARNISH_NO_CLEAR => t('None'),
     ),
     '#default_value' => variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR),
     '#description' => t('What kind of cache clearing Varnish should utilize. Drupal default will clear all page caches on node updates and cache flush events. None will allow pages to persist for their full max-age; use this if you want to write your own cache-clearing logic.'),
   );
-  
+
   // Detect expire module and add this option.
   if (module_exists('expire')) {
     $form['varnish_cache_clear']['#options'][VARNISH_SELECTIVE_CLEAR] = t('Selective (experimental; uses expire.module)');
     $form['varnish_cache_clear']['#description'] .= ' ' . t('Selective will clear a list of URLs you specify as well as any node urls themselves.');
   }
   else {
-    $form['varnish_cache_clear']['#description'] .= ' ' . t('Installing the !link will enable "Selective" clearing.', array('!link' => '<a href="http://drupal.org/project/expire" target="_blank">'. t('Expire module') .'</a>'));
+    $form['varnish_cache_clear']['#description'] .= ' ' . t('Installing the !link will enable "Selective" clearing.', array('!link' => '<a href="http://drupal.org/project/expire" target="_blank">' . t('Expire module') . '</a>'));
   }
 
   // Check status
@@ -105,7 +107,7 @@ function varnish_admin_reports_page() {
   $status = _varnish_terminal_run(array('stats'));
   $output = '';
   foreach ($status as $terminal => $stat) {
-    $output .= '<pre>'. $stat['stats']['msg'] .'</pre>';
+    $output .= '<pre>' . $stat['stats']['msg'] . '</pre>';
   }
   return $output;
 }

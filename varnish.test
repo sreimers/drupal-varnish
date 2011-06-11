@@ -87,7 +87,7 @@ class VarnishCacheInvalidationCase extends VarnishTestCase {
     // Expire all cached pages.
     varnish_purge_all_pages();
   }
-  
+
   function assertRegexpPattern($content, $pattern, $message = '') {
     $this->assertTrue(preg_match($pattern, $content), $message);
   }
@@ -100,7 +100,6 @@ class VarnishCacheInvalidationCase extends VarnishTestCase {
     $cached_pattern = '/[0-9]{9} [0-9]{9}/';
     // Tell the Varnish module that it is OK to cache.
     variable_set('varnish_cache_clear', 1);
-    
     // Fill the cache.
     $this->drupalGet('system-test/set-header', array('query' => array('name' => 'Foo', 'value' => 'bar')));
     $this->assertRegexpPattern($this->drupalGetHeader('X-Varnish'), $not_cached_pattern, t('Varnish header is indicating that it did not have this page in the cache.'));
@@ -124,7 +123,7 @@ class VarnishCacheInvalidationCase extends VarnishTestCase {
     $this->drupalGet('system-test/set-header', array('query' => array('name' => 'Foo', 'value' => 'bar')));
     // Try to invalidate the cache, it should fail.
     cache_clear_all(NULL, 'cache_page');
-    $this->drupalGet('system-test/set-header', array('query' => array('name' => 'Foo', 'value' => 'bar'))); 
+    $this->drupalGet('system-test/set-header', array('query' => array('name' => 'Foo', 'value' => 'bar')));
     $this->assertRegexpPattern($this->drupalGetHeader('X-Varnish'), $cached_pattern , t('Varnish cache did not invalidate itself when minimum cache lifetime was set.'));
   }
 }
