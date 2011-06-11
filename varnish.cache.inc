@@ -35,7 +35,7 @@ class VarnishCache implements DrupalCacheInterface {
   function clear($cid = NULL, $wildcard = FALSE) {
     global $user;
     // Check that we really want to do a cache flush.
-    if (variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) != VARNISH_DEFAULT_CLEAR ||
+    if (!module_exists('varnish') || variable_get('varnish_cache_clear', VARNISH_DEFAULT_CLEAR) != VARNISH_DEFAULT_CLEAR ||
       (variable_get('varnish_flush_cron', 0) && lock_may_be_available('cron'))) {
       return;
     }
