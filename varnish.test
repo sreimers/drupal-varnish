@@ -96,14 +96,13 @@ class VarnishCacheInvalidationCase extends VarnishTestCase {
    * at the appropriate times.
    */
   function testVarnishCacheExpiration() {
-    $not_cached_pattern = '/[0-9]{9}/';
-    $cached_pattern = '/[0-9]{9} [0-9]{9}/';
+    $not_cached_pattern = '/[0-9]+/';
+    $cached_pattern = '/[0-9]+ [0-9]+/';
     // Tell the Varnish module that it is OK to cache.
     variable_set('varnish_cache_clear', 1);
     // Fill the cache.
     $this->drupalGet('system-test/set-header', array('query' => array('name' => 'Foo', 'value' => 'bar')));
     $this->assertRegexpPattern($this->drupalGetHeader('X-Varnish'), $not_cached_pattern, t('Varnish header is indicating that it did not have this page in the cache.'));
-    $this->drupalGetHeaders(TRUE);
     // Request the page again. It should be in the cache.
     $this->drupalGet('system-test/set-header', array('query' => array('name' => 'Foo', 'value' => 'bar')));
     $this->assertRegexpPattern($this->drupalGetHeader('X-Varnish'), $cached_pattern , t('Varnish header is indicating that it had the page in the cache.'));
