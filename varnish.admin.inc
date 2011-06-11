@@ -83,7 +83,7 @@ function varnish_admin_settings_form() {
   $form['varnish_stats'] = array(
     '#type' => 'item',
     '#title' => t('Status'),
-    '#value' => theme('varnish_status', varnish_get_status()),
+    '#markup' => theme('varnish_status', varnish_get_status()),
   );
 
   return system_settings_form($form);
