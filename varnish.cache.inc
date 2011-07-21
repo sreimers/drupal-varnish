@@ -56,6 +56,7 @@ class VarnishCache implements DrupalCacheInterface {
           // Clear the cache for everyone, cache_lifetime seconds have
           // passed since the first request to clear the cache.
           varnish_purge_all_pages();
+          variable_set('cache_flush_' . $this->bin, 0);
         }
       }
       else {
