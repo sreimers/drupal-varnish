@@ -3,7 +3,8 @@
 define('VARNISH_NO_CLEAR', 0);
 define('VARNISH_DEFAULT_CLEAR', 1);
 define('VARNISH_SELECTIVE_CLEAR', 2); // Requires Expire.module to be enabled.
-define('VARNISH_DEFAULT_TIMETOUT', 100); // 100ms
+// Timeout in milliseconds.
+define('VARNISH_DEFAULT_TIMEOUT', 100);
 define('VARNISH_SERVER_STATUS_DOWN', 0);
 define('VARNISH_SERVER_STATUS_UP', 1);
 
@@ -216,14 +217,15 @@ function _varnish_terminal_run($commands) {
   }
   $ret = array();
   $terminals = explode(' ', variable_get('varnish_control_terminal', '127.0.0.1:6082'));
-  $timeout = variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMETOUT);
+  // The variable varnish_socket_timeout defines the timeout in milliseconds.
+  $timeout = variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMEOUT);
   $seconds = (int)($timeout / 1000);
-  $milliseconds = (int)($timeout % 1000 * 1000);
+  $microseconds = (int)($timeout % 1000 * 1000);
   foreach ($terminals as $terminal) {
     list($server, $port) = explode(':', $terminal);
     $client = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
-    socket_set_option($client, SOL_SOCKET, SO_SNDTIMEO, array('sec' => $seconds, 'usec' => $milliseconds));
-    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => $seconds, 'usec' => $milliseconds));
+    socket_set_option($client, SOL_SOCKET, SO_SNDTIMEO, array('sec' => $seconds, 'usec' => $microseconds));
+    socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => $seconds, 'usec' => $microseconds));
     if (@!socket_connect($client, $server, $port)) {
       watchdog('varnish', 'Unable to connect to server socket !server:!port: %error', array(
         '!server' => $server,

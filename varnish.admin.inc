@@ -60,7 +60,7 @@ function varnish_admin_settings_form() {
   $form['varnish_socket_timeout'] = array(
    '#type' => 'textfield',
    '#title' => t('Varnish connection timeout (milliseconds)'),
-   '#default_value' => variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMETOUT),
+   '#default_value' => variable_get('varnish_socket_timeout', VARNISH_DEFAULT_TIMEOUT),
    '#description' => t('If Varnish is running on a different server, you may need to increase this value.'),
    '#required' => TRUE,
   );
