@@ -99,7 +99,13 @@ function varnish_requirements($phase) {
         return $requirements;
       }
       else {
-        $requirements['varnish']['value'] = t('Varnish running. Observe more detailed statistics !link.', array('!link' => l(t('here'), 'admin/reports/varnish')));
+        $version = floatval(variable_get('varnish_version', 2.1));
+        if ($version <= 2.1) {
+          $requirements['varnish']['value'] = t('Varnish is running. Observe more detailed statistics !link.', array('!link' => l(t('here'), 'admin/reports/varnish')));
+        }
+        else {
+          $requirements['varnish']['value'] = t('Running');
+        }
       }
     }
     return $requirements;
