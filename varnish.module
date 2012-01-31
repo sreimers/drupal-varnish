@@ -232,7 +232,7 @@ function _varnish_terminal_run($commands) {
         '!port' => $port,
         '%error' => socket_strerror(socket_last_error($client))
         ), WATCHDOG_ERROR);
-      $ret[] = FALSE;
+      $ret[$terminal] = FALSE;
       // If a varnish server is unavailable, move on to the next in the list.
       continue;
     }
