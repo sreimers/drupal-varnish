@@ -36,11 +36,10 @@ class VarnishCache implements DrupalCacheInterface {
     global $user;
     // Check that we really want to do a cache flush.
     if (!module_exists('varnish') ||
-      (variable_get('varnish_flush_cron', 0) && lock_may_be_available('cron')) ||
-      !variable_get('varnish_cache_clear', 1)) {
+      (variable_get('varnish_flush_cron', 0) && lock_may_be_available('cron'))) {
       return;
     }
-    if (empty($cid)) {
+    if (empty($cid) && variable_get('varnish_cache_clear', 1)) {
       if (variable_get('cache_lifetime', 0)) {
         // We store the time in the current user's $user->cache variable which
         // will be saved into the sessions bin by _drupal_session_write(). We then
