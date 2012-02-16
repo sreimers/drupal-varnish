@@ -73,7 +73,7 @@ class VarnishCache implements DrupalCacheInterface {
           $host = _varnish_get_host();
           $base = base_path();
           $purge = $cid . '(.*)';
-          _varnish_terminal_run(array('purge req.http.host ~ ' . $host . ' && req.url ~ "^' . $base . $purge . '$"'));
+          varnish_purge($host, '^' . $base . $purge . '$');
         }
       }
       elseif (is_array($cid)) {
