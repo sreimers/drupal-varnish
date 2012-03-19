@@ -6,7 +6,9 @@ define('VARNISH_SELECTIVE_CLEAR', 2); // Requires Expire.module to be enabled.
 define('VARNISH_DEFAULT_TIMETOUT', 100); // 100ms
 define('VARNISH_SERVER_STATUS_DOWN', 0);
 define('VARNISH_SERVER_STATUS_UP', 1);
-
+define('VARNISH_BANTYPE_NORMAL', 0);
+define('VARNISH_BANTYPE_BANLURKER', 1);
+define('VARNISH_DEFAULT_BANTYPE', VARNISH_BANTYPE_NORMAL);
 
 /**
  * @file 
@@ -208,7 +210,18 @@ function varnish_purge($host, $pattern) {
   // need to use ban instead of purge.
   $version = floatval(variable_get('varnish_version', 2.1));
   $command = $version >= 3 ? "ban" : "purge";
-  _varnish_terminal_run(array("$command req.http.host ~ $host && req.url ~ \"$pattern\""));
+  $bantype = variable_get('varnish_bantype', VARNISH_DEFAULT_BANTYPE);
+  switch ($bantype) {
+    case VARNISH_BANTYPE_NORMAL:
+      _varnish_terminal_run(array("$command req.http.host ~ $host && req.url ~ \"$pattern\""));
+      break;
+    case VARNISH_BANTYPE_BANLURKER:
+      _varnish_terminal_run(array("$command obj.http.x-host ~ $host && obj.http.x-url  ~ \"$pattern\""));
+      break;
+    default:
+      // We really should NEVER get here. Log WATCHDOG_ERROR. I can only see this happening if a user switches between different versions of the module where we remove a ban type.
+      watchdog('varnish', 'Varnish ban type is out of range.', array(), WATCHDOG_ERROR);
+  }
 }
 
 /**
