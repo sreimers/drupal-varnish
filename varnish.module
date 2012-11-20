@@ -11,11 +11,11 @@ define('VARNISH_BANTYPE_BANLURKER', 1);
 define('VARNISH_DEFAULT_BANTYPE', VARNISH_BANTYPE_NORMAL);
 
 /**
- * @file 
+ * @file
  * varnish.module
  * Provide drupal hooks for integration with the Varnish control layer.
  */
- 
+
 
 /**
  * Implementation of hook_menu()
@@ -64,7 +64,7 @@ function varnish_theme() {
   );
 }
 
-/** 
+/**
  * Implemetation of hook_perm()
  *
  * Allows admins to control access to varnish settings.
@@ -256,9 +256,9 @@ function theme_varnish_status($status, $version = 2.1) {
   foreach ($status as $terminal => $state) {
     list($server, $port) = explode(':', $terminal);
     if ($state == VARNISH_SERVER_STATUS_UP) {
-      $icon = theme('image', 'misc/watchdog-ok.png', "Server OK: {$server}:{$port}", "{$server}:{$port}");
+      $icon = theme('image', 'misc/watchdog-ok.png', check_plain("Server OK: {$server}:{$port}"), check_plain("{$server}:{$port}"));
       if ($version < 3) {
-        $items[] = t('!status_icon Varnish running. Observe more detailed statistics !link.', 
+        $items[] = t('!status_icon Varnish running. Observe more detailed statistics !link.',
                 array('!status_icon' => $icon, '!link' => l(t('here'), 'admin/reports/varnish')));
       }
       else {
@@ -267,7 +267,7 @@ function theme_varnish_status($status, $version = 2.1) {
     }
     else {
       $icon = theme('image', 'misc/watchdog-error.png', 'Server down: {$server}:{$port}', "{$server}:{$port}");
-      $items[] = t('!status_icon The Varnish control terminal is not responding at %server on port %port.', array('!status_icon' => $icon, '%server' => $server, '%port' => $port));
+      $items[] = t('!status_icon The Varnish control terminal is not responding at @server on port @port.', array('!status_icon' => $icon, '@server' => $server, '@port' => $port));
     }
   }
   return theme('item_list', $items);
@@ -308,9 +308,9 @@ function _varnish_terminal_run($commands) {
     socket_set_option($client, SOL_SOCKET, SO_SNDTIMEO, array('sec' => $seconds, 'usec' => $milliseconds));
     socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => $seconds, 'usec' => $milliseconds));
     if (@!socket_connect($client, $server, $port)) {
-      watchdog('varnish', 'Unable to connect to server socket !server:!port: %error', array(
-        '!server' => $server,
-        '!port' => $port,
+      watchdog('varnish', 'Unable to connect to server socket @server: @port: %error', array(
+        '@server' => $server,
+        '@port' => $port,
         '%error' => socket_strerror(socket_last_error($client))
         ), WATCHDOG_ERROR);
       $ret[] = FALSE;
@@ -347,7 +347,7 @@ function _varnish_execute_command($client, $command) {
   $result = socket_write($client, "$command\n");
   $status = _varnish_read_socket($client);
   if ($status['code'] != 200) {
-     watchdog('varnish', 'Recieved status code !code running %command. Full response text: !error', array('!code' => $status['code'], '%command' => $command, '!error' => $status['msg']), WATCHDOG_ERROR);
+     watchdog('varnish', 'Recieved status code @code running %command. Full response text: %error', array('@code' => $status['code'], '%command' => $command, '%error' => $status['msg']), WATCHDOG_ERROR);
      return FALSE;
   }
   else {
@@ -365,7 +365,7 @@ function _varnish_execute_command($client, $command) {
  *   $retty how many times to retry on "temporarily unavalble" errors
  */
 function _varnish_read_socket($client, $retry = 2) {
-  // status and length info is always 13 characters. 
+  // status and length info is always 13 characters.
   $header = socket_read($client, 13, PHP_BINARY_READ);
   if ($header == FALSE) {
     $error = socket_last_error();
@@ -375,7 +375,7 @@ function _varnish_read_socket($client, $retry = 2) {
       return _varnish_read_socket($client, $retry-1);
     }
     else {
-      watchdog('varnish', 'Socket error: !error', array('!error' => socket_strerror($error)), WATCHDOG_ERROR);
+      watchdog('varnish', 'Socket error: %error', array('%error' => socket_strerror($error)), WATCHDOG_ERROR);
       return array(
         'code' => $error,
         'msg' => socket_strerror($error),
@@ -387,6 +387,6 @@ function _varnish_read_socket($client, $retry = 2) {
     'code' => substr($header, 0, 3),
     'msg' => socket_read($client, $msg_len, PHP_BINARY_READ)
   );
-  
+
   return $status;
 }
