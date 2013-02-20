@@ -75,6 +75,7 @@ function varnish_permission() {
     'administer varnish' => array(
       'title' => t('Administer Varnish'),
       'description' => t('Perform administration tasks for varnish.'),
+      'restrict access' => TRUE,
     ),
   );
 }
@@ -190,7 +191,7 @@ function theme_varnish_status($status) {
   foreach ($status as $terminal => $state) {
     list($server, $port) = explode(':', $terminal);
     if ($state == VARNISH_SERVER_STATUS_UP) {
-      $icon = theme('image', array('path' => 'misc/watchdog-ok.png', 'alt' => "Server OK: {$server}:{$port}", "{$server}:{$port}"));
+      $icon = theme('image', array('path' => 'misc/watchdog-ok.png', 'alt' => t("Server OK: @server:@port", array('@server' => $server, '@port' => $port)), 'title' => "{$server}:{$port}"));
       $version = floatval(variable_get('varnish_version', 2.1));
       if ($version < 3) {
         $items[] = t('!status_icon Varnish running. Observe more detailed statistics !link.',
@@ -201,8 +202,8 @@ function theme_varnish_status($status) {
       }
     }
     else {
-      $icon = theme('image', array('path' => 'misc/watchdog-error.png', 'alt' => 'Server down: {$server}:{$port}', "{$server}:{$port}"));
-      $items[] = t('!status_icon The Varnish control terminal is not responding at %server on port %port.', array('!status_icon' => $icon, '%server' => $server, '%port' => $port));
+      $icon = theme('image', array('path' => 'misc/watchdog-error.png', 'alt' => t("Server down: @server:@port", array('@server' => $server, '@port' => $port)), 'title' => "{$server}:{$port}"));
+      $items[] = t('!status_icon The Varnish control terminal is not responding at @server on port @port.', array('!status_icon' => $icon, '@server' => $server, '@port' => $port));
     }
   }
   return theme('item_list', array('items' => $items));
@@ -243,9 +244,9 @@ function _varnish_terminal_run($commands) {
     socket_set_option($client, SOL_SOCKET, SO_SNDTIMEO, array('sec' => $seconds, 'usec' => $microseconds));
     socket_set_option($client, SOL_SOCKET, SO_RCVTIMEO, array('sec' => $seconds, 'usec' => $microseconds));
     if (@!socket_connect($client, $server, $port)) {
-      watchdog('varnish', 'Unable to connect to server socket !server:!port: %error', array(
-        '!server' => $server,
-        '!port' => $port,
+      watchdog('varnish', 'Unable to connect to server socket @server:@port: %error', array(
+        '@server' => $server,
+        '@port' => $port,
         '%error' => socket_strerror(socket_last_error($client))
         ), WATCHDOG_ERROR);
       $ret[$terminal] = FALSE;
@@ -282,7 +283,7 @@ function _varnish_execute_command($client, $command) {
   $result = socket_write($client, "$command\n");
   $status = _varnish_read_socket($client);
   if ($status['code'] != 200) {
-    watchdog('varnish', 'Recieved status code !code running %command. Full response text: !error', array('!code' => $status['code'], '%command' => $command, '!error' => $status['msg']), WATCHDOG_ERROR);
+    watchdog('varnish', 'Recieved status code @code running %command. Full response text: @error', array('@code' => $status['code'], '%command' => $command, '@error' => $status['msg']), WATCHDOG_ERROR);
     return FALSE;
   }
   else {
@@ -310,7 +311,7 @@ function _varnish_read_socket($client, $retry = 2) {
       return _varnish_read_socket($client, $retry-1);
     }
     else {
-      watchdog('varnish', 'Socket error: !error', array('!error' => socket_strerror($error)), WATCHDOG_ERROR);
+      watchdog('varnish', 'Socket error: @error', array('@error' => socket_strerror($error)), WATCHDOG_ERROR);
       return array(
         'code' => $error,
         'msg' => socket_strerror($error),
