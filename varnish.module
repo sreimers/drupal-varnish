@@ -256,7 +256,7 @@ function theme_varnish_status($status, $version = 2.1) {
   foreach ($status as $terminal => $state) {
     list($server, $port) = explode(':', $terminal);
     if ($state == VARNISH_SERVER_STATUS_UP) {
-      $icon = theme('image', 'misc/watchdog-ok.png', check_plain("Server OK: {$server}:{$port}"), check_plain("{$server}:{$port}"));
+      $icon = theme('image', 'misc/watchdog-ok.png', t("Server OK: @server:@port", array('@server' => $server, '@port' => $port)), "{$server}:{$port}");
       if ($version < 3) {
         $items[] = t('!status_icon Varnish running. Observe more detailed statistics !link.',
                 array('!status_icon' => $icon, '!link' => l(t('here'), 'admin/reports/varnish')));
@@ -266,7 +266,7 @@ function theme_varnish_status($status, $version = 2.1) {
       }
     }
     else {
-      $icon = theme('image', 'misc/watchdog-error.png', 'Server down: {$server}:{$port}', "{$server}:{$port}");
+      $icon = theme('image', 'misc/watchdog-error.png', t('Server down: @server:@port', array('@server' => $server, '@port' => $port)), "{$server}:{$port}");
       $items[] = t('!status_icon The Varnish control terminal is not responding at @server on port @port.', array('!status_icon' => $icon, '@server' => $server, '@port' => $port));
     }
   }
