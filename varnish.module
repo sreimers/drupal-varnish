@@ -81,6 +81,14 @@ function varnish_permission() {
 }
 
 /**
+ * Implements hook_flush_caches()
+ * adds a varnish cache to the list of caches
+ */
+function varnish_flush_caches() {
+  return array('external_varnish_page');
+}
+
+/**
  * Implements hook_requirements().
  *
  * Ensure that varnish's connection is good.
