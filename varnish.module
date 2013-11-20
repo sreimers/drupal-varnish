@@ -149,11 +149,26 @@ function varnish_purge_all_pages() {
  * @param string $pattern the pattern to look for and purge.
  */
 function varnish_purge($host, $pattern) {
+  global $base_path, $base_root;
   // Get the current varnish version, if we are using Varnish 3.x, then we can
   // need to use ban instead of purge.
   $version = floatval(variable_get('varnish_version', 2.1));
   $command = $version >= 3 ? "ban" : "purge";
   $bantype = variable_get('varnish_bantype', VARNISH_DEFAULT_BANTYPE);
+
+  // Modify the patterns to remove base url and base path.
+  $patterns = explode('|', $pattern);
+  foreach ($patterns as $num => $single_pattern) {
+    if (substr($single_pattern, 1, strlen($base_path)) == $base_path) {
+      $single_pattern = substr_replace($single_pattern, '', 1, strlen($base_path));
+    }
+    if (substr($single_pattern, 1, strlen($base_root)) == $base_root) {
+      $single_pattern = substr_replace($single_pattern, '', 1, strlen($base_root));
+    }
+    $patterns[$num] = $single_pattern;
+  }
+  $pattern = implode('|', $patterns);
+
   switch ($bantype) {
     case VARNISH_BANTYPE_NORMAL:
       _varnish_terminal_run(array("$command req.http.host ~ $host && req.url ~ \"$pattern\""));
