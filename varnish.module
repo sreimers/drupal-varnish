@@ -127,8 +127,26 @@ function varnish_requirements($phase) {
  * You may also safely call this function directly with an array of local urls to purge.
  */
 function varnish_expire_cache($paths) {
-  $host = _varnish_get_host();
-  varnish_purge_paths($host, $paths);
+  if (module_exists('expire') && variable_get('expire_include_base_url', constant('EXPIRE_INCLUDE_BASE_URL'))) {
+    // Sort the URLs by domain and batch by domain
+    $host_buckets = array();
+    foreach ($paths as $url) {
+      $parts = parse_url($url);
+      $host_buckets[$parts['host']][] = $parts['path'].(!empty($parts['query']) ? '?'.$parts['query'] : '');
+    }
+    foreach ($host_buckets as $host => $purges) {
+      $purge = implode('$|^' , $purges);
+      $purge = '^'. $purge .'$';
+      varnish_purge($host, $purge);
+    }
+  }
+  else {
+    $host = _varnish_get_host();
+    $base = base_path();
+    $purge = implode('$|^' . $base, $paths);
+    $purge = '^'. $base . $purge .'$';
+    varnish_purge($host, $purge);
+  }
 }
 
 /**
