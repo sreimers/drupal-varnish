@@ -43,9 +43,9 @@ class VarnishCache implements DrupalCacheInterface {
     if (empty($cid) && variable_get('varnish_cache_clear', 1)) {
       if (variable_get('cache_lifetime', 0)) {
         // We store the time in the current user's $user->cache variable which
-        // will be saved into the sessions bin by _drupal_session_write(). We then
-        // simulate that the cache was flushed for this user by not returning
-        // cached data that was cached before the timestamp.
+        // will be saved into the sessions bin by _drupal_session_write(). We
+        // then simulate that the cache was flushed for this user by not
+        // returning cached data that was cached before the timestamp.
         $user->cache = REQUEST_TIME;
 
         $cache_flush = variable_get('cache_flush_' . $this->bin, 0);

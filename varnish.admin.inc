@@ -2,7 +2,6 @@
 
 /**
  * @file
- *
  * Administrative functions for Varnish integration.
  */
 
@@ -18,7 +17,6 @@ function varnish_admin_settings_form() {
   }
 
   // Begin socket-dependent configuration.
-
   // Decide whether or not to flush caches on cron runs.
   $form['varnish_flush_cron'] = array(
     '#type' => 'radios',
