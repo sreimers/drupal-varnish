@@ -80,7 +80,7 @@ function varnish_perm() {
  */
 function varnish_requirements($phase) {
   if ($phase == 'runtime') {
-    $requirements = array('varnish');
+    $requirements = array('varnish' => array());
     $requirements['varnish']['title'] = t('Varnish status');
     // try a varnish admin connect, report results
     $status = _varnish_terminal_run(array('status'));
