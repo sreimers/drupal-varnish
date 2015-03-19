@@ -16,23 +16,23 @@
 class VarnishCache implements DrupalCacheInterface {
   protected $bin;
 
-  function __construct($bin) {
+  public function __construct($bin) {
     $this->bin = $bin;
   }
 
-  function get($cid) {
+  public function get($cid) {
     return FALSE;
   }
 
-  function getMultiple(&$cids) {
+  public function getMultiple(&$cids) {
     return array();
   }
 
-  function set($cid, $data, $expire = CACHE_PERMANENT) {
+  public function set($cid, $data, $expire = CACHE_PERMANENT) {
     // We won't do anything here.
   }
 
-  function clear($cid = NULL, $wildcard = FALSE) {
+  public function clear($cid = NULL, $wildcard = FALSE) {
     global $user;
     // Check that we really want to do a cache flush.
     if (!module_exists('varnish') ||
@@ -86,7 +86,8 @@ class VarnishCache implements DrupalCacheInterface {
     }
   }
 
-  function isEmpty() {
+  public function isEmpty() {
     return FALSE;
   }
+
 }
