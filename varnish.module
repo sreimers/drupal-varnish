@@ -152,9 +152,6 @@ function varnish_purge($host, $pattern) {
   // Modify the patterns to remove base url and base path.
   $patterns = explode('|', $pattern);
   foreach ($patterns as $num => $single_pattern) {
-    if (substr($single_pattern, 1, strlen($base_path)) == $base_path) {
-      $single_pattern = substr_replace($single_pattern, '', 1, strlen($base_path));
-    }
     if (substr($single_pattern, 1, strlen($base_root)) == $base_root) {
       $single_pattern = substr_replace($single_pattern, '', 1, strlen($base_root));
     }
