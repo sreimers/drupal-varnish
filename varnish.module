@@ -158,6 +158,9 @@ function varnish_purge($host, $pattern) {
     $patterns[$num] = $single_pattern;
   }
   $pattern = implode('|', $patterns);
+ 
+  //Fix <front> bug
+  $pattern = str_replace("<front>", "", $pattern);
 
   switch ($bantype) {
     case VARNISH_BANTYPE_NORMAL:
